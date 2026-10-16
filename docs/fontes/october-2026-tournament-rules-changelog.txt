@@ -1,0 +1,112 @@
+October 2026 Tournament Rules Changelog
+October 2026 Tournament Rules Changelog
+Announcements
+2026-10-09T16:00:00.000Z
+Hey Riftbounders,
+Vriss here with a new Tournament Rules Update! Today’s rules go into effect with the
+Radiance
+Pre-Rift on October 16, 2026.
+While this update may look large, it mostly involves cleaning up small mistakes and adding clarity for judges where it was lacking. I’d like to give a huge shoutout to the Riftbound judge community for all the amazing feedback that helped inform this update, especially
+@benediktwerner
+for collating a ton of information and sending it our way. Riftbound thrives when we can work with players and judges to provide the best Organized Play experience possible.
+For a detailed breakdown of all the changes, see the bulleted list below. For a link to the full Tournament Rules document, look here:
+[
+Tournament rules doc link
+]
+While we’ve come a long way developing and improving the Tournament Rules, we see a need to share more about our philosophy and thought processes behind this document. We’re working on a new companion document for the Tournament Rules which fully breaks down the philosophy and intent behind each rule, especially for the judge perspective. More details to come soon!
+Changing Gameplay Decisions
+Before letting you dive into the nitty gritty, I want to elaborate on Riftbound’s
+Gameplay Decision
+policy (509. in the Tournament Rules).
+The
+Gameplay Decisions
+policy exists to give players some flexibility when making decisions (we are not aiming for an equivalent of chess’ touch-move), but it is
+not
+meant to allow players to take back errors once their opponent is required to call information to their attention.
+For example:
+Player A moves their 3 Might unit to a battlefield and passes focus.
+Player B indicates their 2 Might unit at that battlefield is now at 4 Might due to their legend, Wuju Bladesman.
+Player A can no longer change their decision to move to that battlefield and pass focus.
+High Organized Play Level (OPL) Riftbound events have the highest level of competitive integrity, valuing player’s skills and abilities to evaluate the game and make strategically correct tactical decisions. At high OPL, we never want it to feel like you need to play the game for your opponent or get punished for your opponent’s mistakes.
+(At casual OPL, allowing an opponent to take back a mistake like this is not required, but it is encouraged for sportsmanship and learning.)
+Changelog
+Increased clarity on when players can change gameplay decisions.
+Updated 509.5. - 509.6.b., renumbered following.
+Completely reworked
+Deck Presentation Error
+remedies to be clearer and better describe their intent, and detail missing Chosen Champions remedies for all OPLs.
+Updated 703.4.b. and its sub-bullets.
+Clarified that loops must be fully deterministic and include no random elements. Added examples.
+Added 505.2. - 505.2.b. and 505.13.
+Clarified that knowingly attempting to engage in
+Improperly Determining a Winner
+is cheating, increased penalty at Professional OPL.
+Added 703.10.d. - 703.10.e.
+Further defined
+Floor Judge
+responsibility on correcting errors they see, even if they are not called by a player.
+Added 204.5.c. - 204.5.c.1., renumbered following
+Added clarity to when penalties should be upgraded based on being advantageous to the erroring player.
+Added 702.1.d. - 702.1.d.1.
+Added
+Radiance
+to Standard sets.
+Added 601.3.c.6. - 601.3.c.6.a.
+Expanded
+Facedown Card Error
+to include when cards illegally leave a facedown zone.
+Rewrote 702.13. and its sub-bullets.
+Added Might/Might Bonus to the parts of a card that must remain intact when a card is altered.
+Updated 419.4.a.
+Clarified that players are allowed to bluff about their private information.
+Added 502.11. and renumbered following.
+Clarified that tokens must be represented by card objects with a clear ready state and must be understandable by opponents when used.
+Updated 508.8.
+Clarified “choosing” things, lethal damage, and adding resources as examples of observable impact for triggers.
+Added 506.3.e.10. - 506.3.e.12.
+Added a requirement for the state of additional turns to be communicated between players.
+Added 502.4.b. and renumbered following,
+Clarified that when applying remedies, a “full round cycle” completes when the player whose turn the error occurred on begins their next turn.
+Added 702.1.e.
+Added missing penalties for illegally scouting matches or using electronic devices at inappropriate times.
+Updated 410.4. and added 703.9.g.
+Clarified that randomized deck checks should occur at the start of a round and should verify all deck elements, added some process clarification.
+Added 411.3.a. Updated 411.3. and renumbered following
+Corrected typo in
+Mispayment for Cost
+remedy.
+Updated 702.9.b.3.
+Fixed missing/incorrect number references.
+Added 602.1.a.3. Updated 406.1.d. , 702.2.b.
+Clarified that Battlefields can’t be reused if a game loss is applied after Battlefields have been revealed.
+Added 406.1.c. and renumbered following.
+Changed the
+Overpayment for Cost
+remedies to not include giving the erroring player floating resources if a simple rewind is not possible.
+Updated 702.8.b.1.
+Clarified that players may look at outside notes during sideboarding and after Battlefields are revealed, but must stop once opening hands are drawn (before mulligans).
+Updated 416.4. - 416.5
+Clarified that best-of-one sideboarding does not apply to limited competitions.
+Added 602.3.g. and renumbered following.
+Clarified
+Failure to Maintain Game State
+warnings are fully exempt from upgrades.
+Reworded 702.1.b. and 702.1.b.1.
+Added guidance for judges when performing a shuffle remedy and the deck is fully known or the randomized portion is indeterminable.
+Added 701.4.b.1. - 701.4.b.2.
+Added special deck registration requirements for special deckbuilding rules such as Neeko.
+Added 401.2.a.
+Updated
+Failure to Maintain Game State
+to exclude penalties covered by missed triggers.
+Updated 702.17.a.
+Updated Chosen Champion sleeve requirements to include secret zones.
+Updated 422.2.b.
+Clarified that 1-1 card exchange does not apply to limited sideboarding.
+Updated 403.4.
+Removed confusing wording that implied deck registration was required at low OPL.
+Updated 402.1. and 703.10.b.
+Clarified that at low OPL constructed events, players are typically expected to use the same deck throughout the event, unless given permission otherwise by the tournament organizer.
+Added 401.1.b.
+Clarified that simple rewinds include ready/unrecycling runes spent on the action that is being rewound.
+Added 701.5.b.3.
