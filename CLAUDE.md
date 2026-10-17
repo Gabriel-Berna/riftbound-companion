@@ -3,7 +3,7 @@
 PWA (React + TypeScript + Vite) de apoio a partidas do TCG Riftbound. Interface em português (pt-BR).
 
 - `src/engine/`: regras puras (`game.ts`, `match.ts`), sem React. Toda regra nova entra aqui, com teste em `*.test.ts` citando a regra oficial (ex.: CR 473.1.b).
-- `src/data/battlefields.json`: gerado por `npm run sync-cards` (galeria oficial em playriftbound.com); não editar à mão. Artes vêm da CDN da Riot (`cmsassets.rgpub.io`, com `?w=…&fm=webp`) e ficam em cache no service worker.
+- `src/data/battlefields.json` e `src/data/legends.json`: gerados por `npm run sync-cards` (galeria oficial em playriftbound.com); não editar à mão. Acesso pelo módulo `src/data/cards.ts`. O campeão de cada lenda vem das tags da carta. Artes vêm da CDN da Riot (`cmsassets.rgpub.io`, com `?w=…&fm=webp`) e ficam em cache no service worker.
 - Visual: tokens de cor e fontes (Cinzel para títulos e números, Inter para texto) em `src/styles.css`. Paleta do Riftbound: azul-petróleo, laranja #EF7D00, dourado hextech.
 - `src/ui/`: telas e componentes. `src/store.ts`: estado do app, desfazer e persistência em localStorage.
 - Regras oficiais: `docs/regras-riftbound.md` (resumo) e `docs/fontes/` (textos completos, pesquisáveis com grep).

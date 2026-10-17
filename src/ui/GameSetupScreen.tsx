@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { availableBattlefields, firstPlayerRule, gameWins, type MatchState } from '../engine/match'
 import type { PlayerIndex } from '../engine/types'
 import type { AppAction } from '../store'
-import { BattlefieldTile } from './battlefields'
+import { BattlefieldTile } from './cards'
 import { Brand } from './common'
 
 const pick = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)]

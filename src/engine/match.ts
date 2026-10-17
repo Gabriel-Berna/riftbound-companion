@@ -6,6 +6,8 @@ export type MatchFormat = 'duel' | 'match'
 
 export interface MatchPlayer {
   name: string
+  /** Nome (título) da lenda do jogador, como na galeria oficial. */
+  legend?: string
   /** Os 3 battlefields do deck do jogador. */
   battlefields: [string, string, string]
 }

@@ -1,5 +1,6 @@
 import { createMatch, gameWins, matchWinner, type MatchState } from '../engine/match'
 import type { AppAction } from '../store'
+import { findLegend } from '../data/cards'
 import { Brand } from './common'
 
 export function MatchOverScreen({ match, dispatch }: { match: MatchState; dispatch: (a: AppAction) => void }) {
@@ -19,6 +20,20 @@ export function MatchOverScreen({ match, dispatch }: { match: MatchState; dispat
           )
         }
       />
+
+      {match.players.some((pl) => findLegend(pl.legend)) && (
+        <section className="card">
+          <h2>Lendas</h2>
+          {([0, 1] as const).map((p) => {
+            const legend = findLegend(match.players[p].legend)
+            return (
+              <p key={p} className="legend-line">
+                <b className={`c${p}`}>{name(p)}</b>: {legend ? `${legend.champion} — ${legend.name}` : 'não informada'}
+              </p>
+            )
+          })}
+        </section>
+      )}
 
       <section className="card">
         <h2>Jogos</h2>

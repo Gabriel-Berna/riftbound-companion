@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { conquerOutcome, runesToChannel, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
-import { DOMAINS, type Battlefield, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
+import { DOMAINS, type Battlefield, type Domain, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
 import type { AppAction, AppState } from '../store'
-import { findBattlefield } from '../data/battlefields'
-import { artStyle } from './battlefields'
+import { findBattlefield, findLegend } from '../data/cards'
+import { battlefieldArt, DomainIcons, legendArt } from './cards'
 import { ScoreGems, Sheet, Stepper } from './common'
 import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
@@ -29,7 +29,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
 
   return (
     <main className="game">
-      <PlayerPanel game={game} player={1} flipped={flipped(1)} act={act} openPool={() => setPanel({ kind: 'pool', player: 1 })} />
+      <PlayerPanel game={game} legend={match.players[1].legend} player={1} flipped={flipped(1)} act={act} openPool={() => setPanel({ kind: 'pool', player: 1 })} />
 
       <section className="center">
         <div className="toolbar">
@@ -51,7 +51,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
         <TurnStrip game={game} flipped={flipped(game.active)} act={act} />
       </section>
 
-      <PlayerPanel game={game} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
+      <PlayerPanel game={game} legend={match.players[0].legend} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
 
       <Toast game={game} />
 
@@ -59,7 +59,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
         <BattlefieldSheet game={game} id={panel.id} act={act} onClose={() => setPanel(null)} />
       )}
       {panel?.kind === 'pool' && (
-        <PoolSheet game={game} player={panel.player} flipped={flipped(panel.player)} act={act} onClose={() => setPanel(null)} />
+        <PoolSheet game={game} legend={match.players[panel.player].legend} player={panel.player} flipped={flipped(panel.player)} act={act} onClose={() => setPanel(null)} />
       )}
       {panel?.kind === 'log' && (
         <Sheet title="Histórico do jogo" onClose={() => setPanel(null)}>
@@ -80,16 +80,35 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
   )
 }
 
-function PlayerPanel(props: { game: GameState; player: PlayerIndex; flipped: boolean; act: (a: GameAction) => void; openPool: () => void }) {
+function PlayerPanel(props: {
+  game: GameState
+  legend: string | undefined
+  player: PlayerIndex
+  flipped: boolean
+  act: (a: GameAction) => void
+  openPool: () => void
+}) {
   const { game, player, act } = props
   const p = game.players[player]
+  const legend = findLegend(props.legend)
   const isActive = game.active === player
   const power = Object.values(p.power).reduce((a, b) => a + b, 0)
 
   return (
-    <section className={`panel p${player} ${isActive ? 'active' : ''} ${props.flipped ? 'flipped' : ''}`} aria-label={`Painel de ${p.name}`}>
+    <section
+      className={`panel p${player} ${isActive ? 'active' : ''} ${props.flipped ? 'flipped' : ''} ${legend ? 'with-legend' : ''}`}
+      aria-label={`Painel de ${p.name}`}
+    >
+      {legend && <div className="panel-art" style={legendArt(legend.name, 640)} aria-hidden="true" />}
       <div className="panel-head">
-        <span className="panel-name">{p.name}</span>
+        <span className="panel-id">
+          <span className="panel-name">{p.name}</span>
+          {legend && (
+            <span className="panel-legend">
+              <DomainIcons domains={legend.domains} /> {legend.champion}
+            </span>
+          )}
+        </span>
         {isActive && <span className="badge">Vez de jogar</span>}
         <button
           className="text-btn"
@@ -126,7 +145,7 @@ function PlayerPanel(props: { game: GameState; player: PlayerIndex; flipped: boo
 function BattlefieldCard({ game, bf, onClick }: { game: GameState; bf: Battlefield; onClick: () => void }) {
   const ctrl = bf.controller
   return (
-    <button className={`bf ${ctrl === null ? 'free' : `ctrl${ctrl}`} ${findBattlefield(bf.name) ? 'has-art' : ''}`} style={artStyle(bf.name)} onClick={onClick}>
+    <button className={`bf ${ctrl === null ? 'free' : `ctrl${ctrl}`} ${findBattlefield(bf.name) ? 'has-art' : ''}`} style={battlefieldArt(bf.name)} onClick={onClick}>
       <span className="bf-name">{bf.name}</span>
       <span className="bf-ctrl">{ctrl === null ? 'Sem controle' : `Controle: ${game.players[ctrl].name}`}</span>
       <span className="bf-scored">
@@ -154,7 +173,7 @@ function BattlefieldSheet(props: { game: GameState; id: string; act: (a: GameAct
   return (
     <Sheet title={bf.name} onClose={props.onClose}>
       {card && (
-        <div className="bf-detail has-art" style={artStyle(bf.name, 800)}>
+        <div className="bf-detail has-art" style={battlefieldArt(bf.name, 800)}>
           <p>{card.text}</p>
         </div>
       )}
@@ -197,10 +216,21 @@ function BattlefieldSheet(props: { game: GameState; id: string; act: (a: GameAct
   )
 }
 
-function PoolSheet(props: { game: GameState; player: PlayerIndex; flipped: boolean; act: (a: GameAction) => void; onClose: () => void }) {
+function PoolSheet(props: {
+  game: GameState
+  legend: string | undefined
+  player: PlayerIndex
+  flipped: boolean
+  act: (a: GameAction) => void
+  onClose: () => void
+}) {
   const { game, player, act } = props
   const p = game.players[player]
-  const kinds: PowerKind[] = [...DOMAINS, 'universal']
+  const legend = findLegend(props.legend)
+  // Com lenda definida, só os domínios dela aparecem: o deck segue a Domain Identity da lenda (CR 103.2.b).
+  const kinds: PowerKind[] = [...DOMAINS, 'universal'].filter(
+    (k) => !legend || k === 'universal' || legend.domains.includes(k as Domain) || p.power[k as PowerKind] > 0,
+  ) as PowerKind[]
   return (
     <Sheet title={`Rune pool de ${p.name}`} flipped={props.flipped} onClose={props.onClose}>
       <p className="hint">Energy e Power acumulados. O pool esvazia sozinho quando alguém passa a vez.</p>
