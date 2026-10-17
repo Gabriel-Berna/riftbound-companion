@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { findLegend, legendImage } from '../data/cards'
+import type { Deck } from '../engine/deck'
 import { createMatch, type MatchFormat, type MatchPlayer } from '../engine/match'
 import { isPlaceholderBattlefield } from '../engine/stats'
 import type { AppAction } from '../store'
@@ -7,18 +8,21 @@ import { ArtPicker, BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicke
 
 interface Draft {
   name: string
+  /** Deck salvo escolhido (nome), se houver. */
+  deck: string
   legend: string
   legendArt: string
   battlefields: [string, string, string]
 }
 
-const emptyDraft = (): Draft => ({ name: '', legend: '', legendArt: '', battlefields: ['', '', ''] })
+const emptyDraft = (): Draft => ({ name: '', deck: '', legend: '', legendArt: '', battlefields: ['', '', ''] })
 
 /** Preenche você com o nome, a lenda e os battlefields do seu perfil. */
 const draftFrom = (p: MatchPlayer | null): Draft =>
   p
     ? {
         name: p.name,
+        deck: '',
         legend: p.legend ?? '',
         legendArt: p.legendArt ?? '',
         // Nomes automáticos não são reaproveitados de uma partida para outra.
@@ -40,6 +44,7 @@ function toPlayer(d: Draft, fallbackName: string, prefix: string): MatchPlayer {
     battlefields,
     ...(d.legend && { legend: d.legend }),
     ...(d.legend && d.legendArt && { legendArt: d.legendArt }),
+    ...(d.deck && { deck: d.deck }),
   }
 }
 
@@ -48,6 +53,7 @@ const LABELS = ['Você', 'Oponente'] as const
 export function NewMatchScreen(props: {
   dispatch: (a: AppAction) => void
   profile: MatchPlayer | null
+  decks: Deck[]
   /** Última lenda usada por cada oponente já enfrentado. */
   opponents: Map<string, string | undefined>
   onBack: () => void
@@ -117,6 +123,27 @@ export function NewMatchScreen(props: {
           ))}
         </div>
       </div>
+
+      {props.decks.length > 0 && (
+        <div className="deck-choice">
+          <span className="hint">🃏 Seu deck</span>
+          <div className="chips scroll">
+            {props.decks.map((d) => (
+              <button
+                key={d.id}
+                className={`chip ${drafts[0].deck === d.name ? 'on' : ''}`}
+                onClick={() =>
+                  drafts[0].deck === d.name
+                    ? update(0, { deck: '' })
+                    : update(0, { deck: d.name, legend: d.legend ?? '', legendArt: d.legendArt ?? '', battlefields: d.battlefields })
+                }
+              >
+                {d.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <section className="duel">
         {([0, 1] as const).map((p) => {
@@ -228,7 +255,7 @@ export function NewMatchScreen(props: {
       {pickingLegend !== null && (
         <LegendPicker
           onPick={(legend) => {
-            update(pickingLegend, { legend, legendArt: '' })
+            update(pickingLegend, pickingLegend === 0 ? { legend, legendArt: '', deck: '' } : { legend, legendArt: '' })
             setPickingLegend(null)
           }}
           onClose={() => setPickingLegend(null)}

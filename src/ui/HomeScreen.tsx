@@ -20,6 +20,8 @@ export function HomeScreen(props: {
   onStats: () => void
   onLibrary: () => void
   onSettings: () => void
+  onDecks: () => void
+  deckCount: number
 }) {
   const { profile, records } = props
   const myLegend = findLegend(profile?.legend)
@@ -81,6 +83,11 @@ export function HomeScreen(props: {
           <span className="tile-icon">📊</span>
           <b>Estatísticas</b>
           <small>{records.length ? `${records.length} partida${records.length > 1 ? 's' : ''}` : 'Nenhuma partida ainda'}</small>
+        </button>
+        <button className="tile" onClick={props.onDecks}>
+          <span className="tile-icon">🃏</span>
+          <b>Decks</b>
+          <small>{props.deckCount ? `${props.deckCount} salvo${props.deckCount > 1 ? 's' : ''}` : 'Salve seus decks'}</small>
         </button>
         <button className="tile" onClick={props.onLibrary}>
           <span className="tile-icon">📚</span>

@@ -166,6 +166,7 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
             rows={stats.byMyLegend}
             render={(row) => <Row key={row.key} row={row} label={legendLabel(row.key)} art={legendArt(row.key)} />}
           />
+          <Section title="Seus decks" rows={stats.byMyDeck} render={(row) => <Row key={row.key} row={row} label={row.key} />} />
           <Section
             title="Contra lendas"
             rows={stats.byOpponentLegend}

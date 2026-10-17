@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState } from 'react'
 import { createMatch, isMatchOver, type MatchAction } from './engine/match'
 import { useAppStore } from './store'
+import type { Deck } from './engine/deck'
+import { DeckEditor, DecksScreen } from './ui/DecksScreen'
 import { GameScreen } from './ui/GameScreen'
 import { GameSetupScreen } from './ui/GameSetupScreen'
 import { HomeScreen } from './ui/HomeScreen'
@@ -12,11 +14,12 @@ import { SettingsScreen } from './ui/SettingsScreen'
 import { StatsScreen } from './ui/StatsScreen'
 import { useRoundClock } from './ui/timer'
 
-type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings'
+type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings' | 'decks'
 
 export function App() {
   const [state, dispatch] = useAppStore()
   const [view, setView] = useState<View>('home')
+  const [editingDeck, setEditingDeck] = useState<Deck | null>(null)
   const { match, records } = state
   const home = () => setView('home')
   const matchDispatch = useCallback((action: MatchAction) => dispatch({ type: 'match', action }), [dispatch])
@@ -42,14 +45,27 @@ export function App() {
   // A key recria a tela a cada jogo, zerando as escolhas do jogo anterior.
   if (match) return <GameSetupScreen key={match.games.length} match={match} dispatch={dispatch} />
 
+  if (editingDeck)
+    return (
+      <DeckEditor
+        key={editingDeck.id}
+        deck={editingDeck}
+        saved={state.decks.some((d) => d.id === editingDeck.id)}
+        dispatch={dispatch}
+        onClose={() => setEditingDeck(null)}
+      />
+    )
+
   switch (view) {
+    case 'decks':
+      return <DecksScreen decks={state.decks} onOpen={setEditingDeck} onBack={home} />
     case 'new': {
       // Ao terminar a partida, o app volta para o início.
       const startMatch: typeof dispatch = (a) => {
         dispatch(a)
         if (a.type === 'newMatch') home()
       }
-      return <NewMatchScreen dispatch={startMatch} profile={profile} opponents={opponents} onBack={home} />
+      return <NewMatchScreen dispatch={startMatch} profile={profile} decks={state.decks} opponents={opponents} onBack={home} />
     }
     case 'library':
       return <LibraryScreen onClose={home} />
@@ -79,6 +95,8 @@ export function App() {
           onStats={() => setView('stats')}
           onLibrary={() => setView('library')}
           onSettings={() => setView('settings')}
+          onDecks={() => setView('decks')}
+          deckCount={state.decks.length}
         />
       )
     }

@@ -35,6 +35,8 @@ export interface Stats {
   goingFirst: Tally
   goingSecond: Tally
   byMyLegend: StatRow[]
+  /** Desempenho por deck salvo (só partidas em que você escolheu um deck). */
+  byMyDeck: StatRow[]
   byOpponentLegend: StatRow[]
   byOpponent: StatRow[]
   /** Desempenho nos jogos disputados com cada um dos seus battlefields. */
@@ -98,6 +100,7 @@ export function computeStats(records: MatchRecord[], filter: StatsFilter = {}): 
     goingSecond: emptyTally(),
   }
   const byMyLegend = new Map<string, StatRow>()
+  const byMyDeck = new Map<string, StatRow>()
   const byOpponentLegend = new Map<string, StatRow>()
   const byOpponent = new Map<string, StatRow>()
   const byMyBattlefield = new Map<string, StatRow>()
@@ -116,6 +119,7 @@ export function computeStats(records: MatchRecord[], filter: StatsFilter = {}): 
       add(stats.games, go)
       add(g.firstPlayer === 0 ? stats.goingFirst : stats.goingSecond, go)
       group(byMyLegend, me.legend, go)
+      group(byMyDeck, me.deck, go)
       group(byOpponentLegend, opponent.legend, go)
       if (!isPlaceholderBattlefield(g.battlefields[0])) group(byMyBattlefield, g.battlefields[0], go)
     }
@@ -124,6 +128,7 @@ export function computeStats(records: MatchRecord[], filter: StatsFilter = {}): 
   return {
     ...stats,
     byMyLegend: sorted(byMyLegend),
+    byMyDeck: sorted(byMyDeck),
     byOpponentLegend: sorted(byOpponentLegend),
     byOpponent: sorted(byOpponent),
     byMyBattlefield: sorted(byMyBattlefield),

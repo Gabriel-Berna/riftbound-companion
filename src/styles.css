@@ -3132,3 +3132,252 @@ h3 {
 .round-clock.paused {
   color: var(--muted);
 }
+
+/* ---------- Decks ---------- */
+
+.deck-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.deck-item {
+  --cut: 12px;
+  position: relative;
+  isolation: isolate;
+  min-height: 96px;
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  text-align: left;
+  background-color: var(--surface-2);
+  background-size: 130% auto;
+  background-position: center 14%;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+}
+
+.deck-item::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, rgba(6, 16, 20, 0.95) 0%, rgba(6, 16, 20, 0.55) 60%, rgba(6, 16, 20, 0.2) 100%);
+}
+
+.deck-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--cream);
+  text-shadow: 0 1px 4px #000;
+}
+
+.deck-sub {
+  font-size: 0.78rem;
+  color: var(--cream);
+  opacity: 0.85;
+  text-shadow: 0 1px 3px #000;
+}
+
+.deck-badge {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.8rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.deck-badge.ok {
+  background: rgba(62, 207, 142, 0.2);
+  color: #3ecf8e;
+}
+
+.deck-badge.pending {
+  background: rgba(245, 165, 36, 0.18);
+  color: var(--warn);
+}
+
+.deck-title {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 0.3rem 0;
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--cream);
+}
+
+.deck-title:focus {
+  outline: none;
+  border-bottom-color: var(--orange);
+}
+
+.deck-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.deck-summary span {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: rgba(245, 165, 36, 0.14);
+  color: var(--warn);
+}
+
+.deck-summary span.ok {
+  background: rgba(62, 207, 142, 0.16);
+  color: #3ecf8e;
+}
+
+.deck-issues {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.deck-issues .error {
+  color: #ff9b9b;
+}
+
+.deck-issues .warning {
+  color: var(--warn);
+}
+
+.deck-valid {
+  margin: 0;
+  color: #3ecf8e;
+  font-weight: 700;
+}
+
+.deck-group h3 {
+  font-family: var(--display);
+  font-size: 0.8rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0.4rem 0 0.3rem;
+}
+
+.deck-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.deck-row img {
+  width: 30px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.deck-row-name {
+  flex: 1;
+  font-size: 0.9rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deck-row-count {
+  min-width: 1.4rem;
+  text-align: center;
+  color: var(--cream);
+}
+
+.add-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(6, 16, 20, 0.5);
+  border: 1px solid var(--line-soft);
+  text-align: left;
+}
+
+.add-row img {
+  width: 36px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 3px;
+}
+
+.add-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.add-main b {
+  color: var(--cream);
+  font-size: 0.9rem;
+}
+
+.add-main small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-count {
+  font-weight: 800;
+  color: var(--orange-2);
+}
+
+.add-plus {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--orange);
+  color: #1d0f00;
+  font-weight: 800;
+}
+
+.paste-box {
+  width: 100%;
+  background: rgba(6, 16, 20, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.7rem;
+  color: var(--text);
+  font: 0.85rem/1.4 ui-monospace, monospace;
+  resize: vertical;
+}
+
+.deck-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.deck-choice .hint {
+  margin: 0;
+}

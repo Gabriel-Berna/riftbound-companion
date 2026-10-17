@@ -53,6 +53,13 @@ describe('estatísticas', () => {
     expect(s.byMyBattlefield.find((r) => r.key === 'A2')).toMatchObject({ played: 4, wins: 1, losses: 2, draws: 1 })
   })
 
+  it('agrupa por deck salvo quando ele foi escolhido', () => {
+    const r = record('Bruno', 'Loose Cannon', 'Nine-Tailed Fox', [game(0, 0), game(1, 1)])
+    r.players[0].deck = 'Jinx Aggro'
+    const s = computeStats([r, ...records])
+    expect(s.byMyDeck).toEqual([{ key: 'Jinx Aggro', played: 2, wins: 1, losses: 1, draws: 0 }])
+  })
+
   it('filtra pela sua lenda', () => {
     const s = computeStats(records, { myLegend: 'Loose Cannon' })
     expect(s.matches.played).toBe(2)

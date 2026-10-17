@@ -10,6 +10,8 @@ export interface MatchPlayer {
   legend?: string
   /** Arte escolhida para a lenda (URL de uma das artes dela); sem ela, usa a principal. */
   legendArt?: string
+  /** Nome do deck salvo usado na partida, se houver. */
+  deck?: string
   /** Os 3 battlefields do deck do jogador. */
   battlefields: [string, string, string]
 }

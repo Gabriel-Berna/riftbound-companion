@@ -1,5 +1,6 @@
 import { useEffect, useReducer } from 'react'
 import { isMatchOver, matchReducer, type MatchAction, type MatchPlayer, type MatchState } from './engine/match'
+import type { Deck } from './engine/deck'
 import { mergeRecords, recordFromMatch, type MatchRecord } from './engine/stats'
 
 export interface Settings {
@@ -24,6 +25,8 @@ export interface AppState {
   settings: Settings
   /** Você: nome, lenda e battlefields usados por padrão (atualizado a cada partida). */
   profile: MatchPlayer | null
+  /** Seus decks salvos, do mais recente ao mais antigo. */
+  decks: Deck[]
 }
 
 export type AppAction =
@@ -38,10 +41,13 @@ export type AppAction =
   | { type: 'clearRecords' }
   | { type: 'setting'; key: keyof Settings; value: boolean }
   | { type: 'setProfile'; profile: MatchPlayer }
+  | { type: 'saveDeck'; deck: Deck }
+  | { type: 'deleteDeck'; id: string }
 
 const STATE_KEY = 'riftbound-companion/v1'
 // As partidas ficam numa chave própria, para não se perderem se o formato do estado mudar.
 const RECORDS_KEY = 'riftbound-companion/records/v1'
+const DECKS_KEY = 'riftbound-companion/decks/v1'
 const HISTORY_LIMIT = 200
 
 export const newId = (): string =>
@@ -85,6 +91,10 @@ function reducer(s: AppState, a: AppAction): AppState {
       return { ...s, settings: { ...s.settings, [a.key]: a.value } }
     case 'setProfile':
       return { ...s, profile: a.profile }
+    case 'saveDeck':
+      return { ...s, decks: [a.deck, ...s.decks.filter((d) => d.id !== a.deck.id)] }
+    case 'deleteDeck':
+      return { ...s, decks: s.decks.filter((d) => d.id !== a.id) }
   }
 }
 
@@ -114,6 +124,7 @@ function load(): AppState {
     records: read<MatchRecord[]>(RECORDS_KEY) ?? [],
     settings: { ...DEFAULT_SETTINGS, ...saved?.settings },
     profile: saved?.profile ?? null,
+    decks: read<Deck[]>(DECKS_KEY) ?? [],
   }
 }
 
@@ -123,5 +134,6 @@ export function useAppStore() {
   const { match, history, tableMode, records, settings, profile } = state
   useEffect(() => write(STATE_KEY, { match, history, tableMode, settings, profile }), [match, history, tableMode, settings, profile])
   useEffect(() => write(RECORDS_KEY, records), [records])
+  useEffect(() => write(DECKS_KEY, state.decks), [state.decks])
   return [state, dispatch] as const
 }
