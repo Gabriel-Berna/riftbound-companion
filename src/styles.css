@@ -3393,3 +3393,153 @@ h3 {
 .share-btn {
   border: 1px solid var(--gold-soft);
 }
+
+/* ---------- Regras rápidas ---------- */
+
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rule-topic {
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(20, 44, 54, 0.92), rgba(12, 28, 35, 0.92));
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.rule-topic.open {
+  border-color: var(--gold-soft);
+}
+
+.rule-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  text-align: left;
+}
+
+.rule-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(239, 125, 0, 0.14);
+  color: var(--orange-2);
+  font-size: 1.05rem;
+}
+
+.rule-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.rule-titles b {
+  font-family: var(--display);
+  color: var(--cream);
+}
+
+.rule-titles small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.rule-body {
+  padding: 0 0.95rem 0.85rem 3.6rem;
+}
+
+.rule-body ul {
+  margin: 0;
+  padding-left: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.rule-refs {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+/* ---------- Introdução ---------- */
+
+.onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: var(--bg-0);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.onboarding-art {
+  position: absolute;
+  inset: 0;
+  background-size: 185% auto;
+  background-position: center 6%;
+  background-repeat: no-repeat;
+  animation: victory-zoom 8s ease-out forwards, fade-in 0.6s ease-out;
+}
+
+.onboarding-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, var(--bg-0) 32%, rgba(6, 16, 20, 0.5) 55%, rgba(6, 16, 20, 0.2) 78%, rgba(6, 16, 20, 0.6) 100%);
+}
+
+.onboarding-content {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  padding: 1rem 20px max(1.5rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.onboarding-content h1 {
+  font-family: var(--display);
+  font-size: 2rem;
+  color: var(--cream);
+  text-shadow: 0 2px 10px #000;
+  animation: fade-in 0.5s ease-out;
+}
+
+.onboarding-content p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.onboarding-dots {
+  display: flex;
+  gap: 8px;
+  padding: 0.3rem 0;
+}
+
+.onboarding-dots i {
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  background: var(--line);
+}
+
+.onboarding-dots i.on {
+  background: var(--orange);
+  box-shadow: 0 0 8px var(--orange-glow);
+}

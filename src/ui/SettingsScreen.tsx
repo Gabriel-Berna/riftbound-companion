@@ -87,6 +87,10 @@ export function SettingsScreen(props: {
         </label>
       </section>
 
+      <button className="secondary" onClick={() => dispatch({ type: 'setOnboarded', value: false })}>
+        Ver a introdução de novo
+      </button>
+
       <section className="card">
         <h2>Sobre</h2>
         <p className="hint">

@@ -8,6 +8,7 @@ import { battlefieldArt, DomainIcons, legendArt } from './cards'
 import { ScoreGems, Sheet, Stepper } from './common'
 import { useGameFeedback, useWakeLock } from './effects'
 import { LibraryScreen } from './LibraryScreen'
+import { RulesScreen } from './RulesScreen'
 import { SettingsToggles } from './SettingsScreen'
 import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
 import { RoundClock } from './timer'
@@ -19,6 +20,7 @@ type Panel =
   | { kind: 'log' }
   | { kind: 'menu' }
   | { kind: 'library' }
+  | { kind: 'rules' }
   | null
 
 interface Props {
@@ -87,9 +89,18 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
         </Sheet>
       )}
       {panel?.kind === 'menu' && (
-        <MenuSheet state={state} match={match} game={game} act={act} dispatch={dispatch} onClose={() => setPanel(null)} />
+        <MenuSheet
+          state={state}
+          match={match}
+          game={game}
+          act={act}
+          dispatch={dispatch}
+          onRules={() => setPanel({ kind: 'rules' })}
+          onClose={() => setPanel(null)}
+        />
       )}
       {panel?.kind === 'library' && <LibraryScreen overlay onClose={() => setPanel(null)} />}
+      {panel?.kind === 'rules' && <RulesScreen overlay onClose={() => setPanel(null)} />}
       {game.result && <GameOver match={match} game={game} dispatch={dispatch} />}
       {intro && <VersusIntro match={match} game={game} onDone={closeIntro} />}
     </main>
@@ -334,7 +345,7 @@ function Toast({ game }: { game: GameState }) {
 }
 
 
-function MenuSheet(props: { state: AppState; match: MatchState; game: GameState; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
+function MenuSheet(props: { state: AppState; match: MatchState; game: GameState; onRules: () => void; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
   const { game, act } = props
   const close = (fn: () => void) => () => {
     fn()
@@ -344,6 +355,9 @@ function MenuSheet(props: { state: AppState; match: MatchState; game: GameState;
     <Sheet title="Menu" onClose={props.onClose}>
       <h3>Preferências</h3>
       <SettingsToggles settings={props.state.settings} dispatch={props.dispatch} />
+      <button className="secondary" onClick={props.onRules}>
+        📖 Regras rápidas
+      </button>
       <h3>Partida</h3>
       <div className="actions">
         {props.match.timer?.startedAt != null && !props.match.timeUp && (

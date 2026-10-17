@@ -27,6 +27,8 @@ export interface AppState {
   profile: MatchPlayer | null
   /** Seus decks salvos, do mais recente ao mais antigo. */
   decks: Deck[]
+  /** A introdução de primeiro uso já foi vista. */
+  onboarded: boolean
 }
 
 export type AppAction =
@@ -43,6 +45,7 @@ export type AppAction =
   | { type: 'setProfile'; profile: MatchPlayer }
   | { type: 'saveDeck'; deck: Deck }
   | { type: 'deleteDeck'; id: string }
+  | { type: 'setOnboarded'; value: boolean }
 
 const STATE_KEY = 'riftbound-companion/v1'
 // As partidas ficam numa chave própria, para não se perderem se o formato do estado mudar.
@@ -95,6 +98,8 @@ function reducer(s: AppState, a: AppAction): AppState {
       return { ...s, decks: [a.deck, ...s.decks.filter((d) => d.id !== a.deck.id)] }
     case 'deleteDeck':
       return { ...s, decks: s.decks.filter((d) => d.id !== a.id) }
+    case 'setOnboarded':
+      return { ...s, onboarded: a.value }
   }
 }
 
@@ -125,14 +130,18 @@ function load(): AppState {
     settings: { ...DEFAULT_SETTINGS, ...saved?.settings },
     profile: saved?.profile ?? null,
     decks: read<Deck[]>(DECKS_KEY) ?? [],
+    onboarded: saved?.onboarded ?? false,
   }
 }
 
 /** Estado do app, salvo no aparelho para sobreviver a recarregamentos. */
 export function useAppStore() {
   const [state, dispatch] = useReducer(reducer, undefined, load)
-  const { match, history, tableMode, records, settings, profile } = state
-  useEffect(() => write(STATE_KEY, { match, history, tableMode, settings, profile }), [match, history, tableMode, settings, profile])
+  const { match, history, tableMode, records, settings, profile, onboarded } = state
+  useEffect(
+    () => write(STATE_KEY, { match, history, tableMode, settings, profile, onboarded }),
+    [match, history, tableMode, settings, profile, onboarded],
+  )
   useEffect(() => write(RECORDS_KEY, records), [records])
   useEffect(() => write(DECKS_KEY, state.decks), [state.decks])
   return [state, dispatch] as const

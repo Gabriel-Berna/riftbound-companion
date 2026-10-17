@@ -10,11 +10,13 @@ import { LibraryScreen } from './ui/LibraryScreen'
 import { ManualRecordScreen } from './ui/ManualRecordScreen'
 import { MatchOverScreen } from './ui/MatchOverScreen'
 import { NewMatchScreen } from './ui/NewMatchScreen'
+import { Onboarding } from './ui/Onboarding'
+import { RulesScreen } from './ui/RulesScreen'
 import { SettingsScreen } from './ui/SettingsScreen'
 import { StatsScreen } from './ui/StatsScreen'
 import { useRoundClock } from './ui/timer'
 
-type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings' | 'decks'
+type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings' | 'decks' | 'rules'
 
 export function App() {
   const [state, dispatch] = useAppStore()
@@ -34,6 +36,14 @@ export function App() {
     return map
   }, [records])
 
+  if (!state.onboarded && !match) return (
+      <Onboarding
+        onDone={() => {
+          dispatch({ type: 'setOnboarded', value: true })
+          home()
+        }}
+      />
+    )
   if (match?.game) return <GameScreen state={state} match={match} game={match.game} dispatch={dispatch} />
   if (match && isMatchOver(match)) {
     const showStats = () => {
@@ -57,6 +67,8 @@ export function App() {
     )
 
   switch (view) {
+    case 'rules':
+      return <RulesScreen onClose={home} />
     case 'decks':
       return <DecksScreen decks={state.decks} onOpen={setEditingDeck} onBack={home} />
     case 'new': {
@@ -96,6 +108,7 @@ export function App() {
           onLibrary={() => setView('library')}
           onSettings={() => setView('settings')}
           onDecks={() => setView('decks')}
+          onRules={() => setView('rules')}
           deckCount={state.decks.length}
         />
       )

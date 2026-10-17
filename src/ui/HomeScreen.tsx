@@ -21,6 +21,7 @@ export function HomeScreen(props: {
   onLibrary: () => void
   onSettings: () => void
   onDecks: () => void
+  onRules: () => void
   deckCount: number
 }) {
   const { profile, records } = props
@@ -93,6 +94,11 @@ export function HomeScreen(props: {
           <span className="tile-icon">📚</span>
           <b>Cartas</b>
           <small>Biblioteca completa</small>
+        </button>
+        <button className="tile" onClick={props.onRules}>
+          <span className="tile-icon">📖</span>
+          <b>Regras</b>
+          <small>Consulta rápida</small>
         </button>
         <button className="tile" onClick={props.onSettings}>
           <span className="tile-icon">⚙</span>
