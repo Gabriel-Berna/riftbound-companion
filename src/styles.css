@@ -985,6 +985,11 @@ h3 {
   gap: 0.6rem;
 }
 
+/* O Sheet rola; sem isso, faixas com overflow (como as artes da carta) encolhem até sumir. */
+.sheet-body > * {
+  flex-shrink: 0;
+}
+
 .sheet-body h3 {
   font-family: var(--display);
   font-size: 0.85rem;
