@@ -1295,3 +1295,238 @@ h3 {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---------- Estatísticas ---------- */
+
+.stats-btn {
+  margin-top: -0.25rem;
+}
+
+.link.back {
+  text-align: left;
+  text-decoration: none;
+  padding: 0.25rem 0;
+  width: auto;
+  align-self: flex-start;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.chip.on {
+  background: linear-gradient(180deg, var(--orange-2), var(--orange));
+  border-color: var(--orange);
+  color: #1d0f00;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.stat-card {
+  background: linear-gradient(180deg, rgba(20, 44, 54, 0.92), rgba(12, 28, 35, 0.92));
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.stat-title {
+  font-family: var(--display);
+  font-size: 0.8rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.stat-value {
+  font-family: var(--display);
+  font-size: 2rem;
+  color: var(--cream);
+  line-height: 1.1;
+}
+
+.stat-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stat-rows,
+.history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.stat-row {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'label rate'
+    'record rate'
+    'bar bar';
+  column-gap: 0.75rem;
+  row-gap: 0.15rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background-color: rgba(6, 16, 20, 0.5);
+  border: 1px solid var(--line-soft);
+  background-size: cover;
+  background-position: center 25%;
+}
+
+.stat-row-label {
+  grid-area: label;
+  font-weight: 700;
+  color: var(--cream);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.stat-row-label small {
+  font-weight: 500;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.stat-row-record {
+  grid-area: record;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.stat-row-rate {
+  grid-area: rate;
+  align-self: center;
+  font-family: var(--display);
+  font-size: 1.3rem;
+  color: var(--cream);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.stat-row-bar {
+  grid-area: bar;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(6, 16, 20, 0.8);
+  overflow: hidden;
+  margin-top: 0.2rem;
+}
+
+.stat-row-bar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--orange), var(--orange-2));
+}
+
+.history-item {
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  background: rgba(6, 16, 20, 0.5);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--line);
+}
+
+.history-item.win {
+  border-left-color: #3ecf8e;
+}
+
+.history-item.loss {
+  border-left-color: var(--danger);
+}
+
+.history-main {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.history-main .icon-btn {
+  margin-left: auto;
+}
+
+.history-item .hint {
+  margin: 0.15rem 0 0;
+}
+
+.result-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: var(--surface-3);
+  color: var(--muted);
+}
+
+.result-badge.win {
+  background: rgba(62, 207, 142, 0.18);
+  color: #3ecf8e;
+}
+
+.result-badge.loss {
+  background: rgba(255, 107, 107, 0.16);
+  color: var(--danger);
+}
+
+.icon-btn.small {
+  width: 30px;
+  height: 30px;
+  font-size: 0.8rem;
+}
+
+.row-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.game-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.game-draft-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.field input[type='date'] {
+  color-scheme: dark;
+}

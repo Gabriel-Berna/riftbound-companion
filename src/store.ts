@@ -1,5 +1,6 @@
 import { useEffect, useReducer } from 'react'
-import { matchReducer, type MatchAction, type MatchState } from './engine/match'
+import { isMatchOver, matchReducer, type MatchAction, type MatchState } from './engine/match'
+import { mergeRecords, recordFromMatch, type MatchRecord } from './engine/stats'
 
 export interface AppState {
   match: MatchState | null
@@ -7,6 +8,8 @@ export interface AppState {
   history: MatchState[]
   /** Gira o painel do oponente para quem está do outro lado da mesa. */
   tableMode: boolean
+  /** Partidas encerradas, da mais recente à mais antiga. */
+  records: MatchRecord[]
 }
 
 export type AppAction =
@@ -15,9 +18,17 @@ export type AppAction =
   | { type: 'undo' }
   | { type: 'quit' }
   | { type: 'toggleTableMode' }
+  | { type: 'addRecord'; record: MatchRecord }
+  | { type: 'deleteRecord'; id: string }
+  | { type: 'importRecords'; records: MatchRecord[] }
 
-const STORAGE_KEY = 'riftbound-companion/v1'
+const STATE_KEY = 'riftbound-companion/v1'
+// As partidas ficam numa chave própria, para não se perderem se o formato do estado mudar.
+const RECORDS_KEY = 'riftbound-companion/records/v1'
 const HISTORY_LIMIT = 200
+
+export const newId = (): string =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 function reducer(s: AppState, a: AppAction): AppState {
   switch (a.type) {
@@ -27,7 +38,14 @@ function reducer(s: AppState, a: AppAction): AppState {
       if (!s.match) return s
       const next = matchReducer(s.match, a.action)
       if (next === s.match) return s
-      return { ...s, match: next, history: [...s.history, s.match].slice(-HISTORY_LIMIT) }
+      // A partida acabou de terminar: guarda para as estatísticas.
+      const finished = !isMatchOver(s.match) && isMatchOver(next)
+      return {
+        ...s,
+        match: next,
+        history: [...s.history, s.match].slice(-HISTORY_LIMIT),
+        records: finished ? [recordFromMatch(next, newId(), new Date()), ...s.records] : s.records,
+      }
     }
     case 'undo': {
       const prev = s.history.at(-1)
@@ -38,28 +56,47 @@ function reducer(s: AppState, a: AppAction): AppState {
       return { ...s, match: null, history: [] }
     case 'toggleTableMode':
       return { ...s, tableMode: !s.tableMode }
+    case 'addRecord':
+      return { ...s, records: mergeRecords(s.records, [a.record]) }
+    case 'deleteRecord':
+      return { ...s, records: s.records.filter((r) => r.id !== a.id) }
+    case 'importRecords':
+      return { ...s, records: mergeRecords(s.records, a.records) }
+  }
+}
+
+function read<T>(key: string): T | undefined {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function write(key: string, value: unknown): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Sem armazenamento disponível (ex.: aba anônima): o app continua funcionando sem salvar.
   }
 }
 
 function load(): AppState {
-  const fallback: AppState = { match: null, history: [], tableMode: true }
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback
-  } catch {
-    return fallback
+  const saved = read<Partial<AppState>>(STATE_KEY)
+  return {
+    match: saved?.match ?? null,
+    history: saved?.history ?? [],
+    tableMode: saved?.tableMode ?? true,
+    records: read<MatchRecord[]>(RECORDS_KEY) ?? [],
   }
 }
 
 /** Estado do app, salvo no aparelho para sobreviver a recarregamentos. */
 export function useAppStore() {
   const [state, dispatch] = useReducer(reducer, undefined, load)
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-    } catch {
-      // Sem armazenamento disponível (ex.: aba anônima): o app continua funcionando sem salvar.
-    }
-  }, [state])
+  const { match, history, tableMode, records } = state
+  useEffect(() => write(STATE_KEY, { match, history, tableMode }), [match, history, tableMode])
+  useEffect(() => write(RECORDS_KEY, records), [records])
   return [state, dispatch] as const
 }

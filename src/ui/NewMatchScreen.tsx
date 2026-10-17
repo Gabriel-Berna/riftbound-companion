@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createMatch, type MatchFormat, type MatchPlayer } from '../engine/match'
+import { isPlaceholderBattlefield } from '../engine/stats'
 import type { AppAction } from '../store'
 import { findLegend } from '../data/cards'
 import { BattlefieldPicker, BattlefieldTile, LegendPicker, LegendTile } from './cards'
@@ -13,6 +14,18 @@ interface Draft {
 
 const emptyDraft = (): Draft => ({ name: '', legend: '', battlefields: ['', '', ''] })
 
+
+/** Preenche você com o nome, a lenda e os battlefields da sua última partida. */
+const draftFrom = (p: MatchPlayer | undefined): Draft =>
+  p
+    ? {
+        name: p.name,
+        legend: p.legend ?? '',
+        // Nomes automáticos não são reaproveitados de uma partida para outra.
+        battlefields: p.battlefields.map((bf) => (isPlaceholderBattlefield(bf) ? '' : bf)) as Draft['battlefields'],
+      }
+    : emptyDraft()
+
 /** Completa campos vazios e garante 3 battlefields com nomes diferentes. */
 function toPlayer(d: Draft, fallbackName: string, prefix: string): MatchPlayer {
   const used = new Set<string>()
@@ -25,9 +38,17 @@ function toPlayer(d: Draft, fallbackName: string, prefix: string): MatchPlayer {
   return { name: d.name.trim() || fallbackName, battlefields, ...(d.legend && { legend: d.legend }) }
 }
 
-export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void }) {
+export function NewMatchScreen(props: {
+  dispatch: (a: AppAction) => void
+  /** Você na última partida registrada. */
+  lastMe?: MatchPlayer
+  /** Última lenda usada por cada oponente já enfrentado. */
+  opponents: Map<string, string | undefined>
+  onStats: () => void
+}) {
+  const { dispatch } = props
   const [format, setFormat] = useState<MatchFormat>('match')
-  const [drafts, setDrafts] = useState<[Draft, Draft]>([emptyDraft(), emptyDraft()])
+  const [drafts, setDrafts] = useState<[Draft, Draft]>(() => [draftFrom(props.lastMe), emptyDraft()])
   const [picking, setPicking] = useState<{ player: 0 | 1; slot: number } | null>(null)
   const [pickingLegend, setPickingLegend] = useState<0 | 1 | null>(null)
 
@@ -54,6 +75,9 @@ export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void 
   return (
     <main className="screen setup">
       <Brand subtitle="Placar e guia de partida · 1v1" />
+      <button className="secondary stats-btn" onClick={props.onStats}>
+        📊 Estatísticas
+      </button>
 
       <section className="card">
         <h2>Formato</h2>
@@ -74,10 +98,20 @@ export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void 
 
       {([0, 1] as const).map((p) => (
         <section key={p} className={`card player-card p${p}`}>
-          <h2>Jogador {p + 1}</h2>
+          <h2>{p === 0 ? 'Você · Jogador 1' : 'Oponente · Jogador 2'}</h2>
           <label className="field">
             <span>Nome</span>
-            <input value={drafts[p].name} placeholder={`Jogador ${p + 1}`} onChange={(e) => update(p, { name: e.target.value })} />
+            <input
+              value={drafts[p].name}
+              placeholder={`Jogador ${p + 1}`}
+              list={p === 1 ? 'known-opponents' : undefined}
+              onChange={(e) => {
+                const name = e.target.value
+                // Oponente conhecido: já sugere a última lenda que ele usou.
+                const knownLegend = p === 1 && !drafts[1].legend ? props.opponents.get(name) : undefined
+                update(p, knownLegend ? { name, legend: knownLegend } : { name })
+              }}
+            />
           </label>
           <div className="field">
             <span>Lenda (opcional)</span>
@@ -133,6 +167,12 @@ export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void 
       <button className="primary big" onClick={start}>
         Começar partida
       </button>
+
+      <datalist id="known-opponents">
+        {[...props.opponents.keys()].map((o) => (
+          <option key={o} value={o} />
+        ))}
+      </datalist>
 
       <p className="legal">
         Riftbound Companion não é endossado pela Riot Games e não reflete as opiniões da Riot Games ou de qualquer pessoa

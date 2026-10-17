@@ -3,7 +3,7 @@ import type { AppAction } from '../store'
 import { findLegend } from '../data/cards'
 import { Brand } from './common'
 
-export function MatchOverScreen({ match, dispatch }: { match: MatchState; dispatch: (a: AppAction) => void }) {
+export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchState; dispatch: (a: AppAction) => void; onStats: () => void }) {
   const winner = matchWinner(match)
   const wins = gameWins(match)
   const name = (p: 0 | 1) => match.players[p].name
@@ -58,6 +58,9 @@ export function MatchOverScreen({ match, dispatch }: { match: MatchState; dispat
       </button>
       <button className="secondary" onClick={() => dispatch({ type: 'quit' })}>
         Nova partida
+      </button>
+      <button className="link" onClick={onStats}>
+        Partida salva nas estatísticas · ver estatísticas
       </button>
     </main>
   )
