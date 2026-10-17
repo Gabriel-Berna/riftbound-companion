@@ -153,3 +153,62 @@ export function isMatchRecord(x: unknown): x is MatchRecord {
     r.games.every((g) => g && (g.firstPlayer === 0 || g.firstPlayer === 1) && (g.result?.kind === 'draw' || g.result?.kind === 'win'))
   )
 }
+
+export interface TimelinePoint {
+  /** Número do jogo na ordem cronológica (1, 2, 3…). */
+  game: number
+  date: string
+  outcome: Outcome
+  /** % de vitórias acumulada até este jogo (0 a 1). */
+  rate: number
+  wins: number
+  played: number
+}
+
+/** Evolução da % de vitórias, jogo a jogo, do mais antigo ao mais recente. */
+export function winRateTimeline(records: MatchRecord[], filter: StatsFilter = {}): TimelinePoint[] {
+  const points: TimelinePoint[] = []
+  let wins = 0
+  const chronological = [...records].sort((a, b) => a.date.localeCompare(b.date))
+  for (const r of chronological) {
+    if (filter.myLegend && r.players[0].legend !== filter.myLegend) continue
+    for (const g of r.games) {
+      const outcome = gameOutcome(g)
+      if (outcome === 'win') wins += 1
+      const played = points.length + 1
+      points.push({ game: played, date: r.date, outcome, rate: wins / played, wins, played })
+    }
+  }
+  return points
+}
+
+export interface Matchup {
+  myLegends: string[]
+  opponentLegends: string[]
+  /** Jogos de cada lenda sua (linha) contra cada lenda adversária (coluna). */
+  cells: Map<string, Tally>
+}
+
+export const matchupKey = (mine: string, theirs: string) => `${mine}\u0000${theirs}`
+
+/** Matriz de confrontos: suas lendas × lendas dos oponentes, contando jogos. */
+export function matchupMatrix(records: MatchRecord[]): Matchup {
+  const cells = new Map<string, Tally>()
+  const mineCount = new Map<string, number>()
+  const theirsCount = new Map<string, number>()
+  for (const r of records) {
+    const mine = r.players[0].legend
+    const theirs = r.players[1].legend
+    if (!mine || !theirs) continue
+    for (const g of r.games) {
+      const key = matchupKey(mine, theirs)
+      const t = cells.get(key) ?? emptyTally()
+      add(t, gameOutcome(g))
+      cells.set(key, t)
+      mineCount.set(mine, (mineCount.get(mine) ?? 0) + 1)
+      theirsCount.set(theirs, (theirsCount.get(theirs) ?? 0) + 1)
+    }
+  }
+  const byCount = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([k]) => k)
+  return { myLegends: byCount(mineCount), opponentLegends: byCount(theirsCount), cells }
+}

@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { conquerOutcome, runesToChannel, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
 import { DOMAINS, type Battlefield, type Domain, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
-import type { AppAction, AppState } from '../store'
+import type { AppAction, AppState, Settings } from '../store'
 import { findBattlefield, findLegend } from '../data/cards'
 import { battlefieldArt, DomainIcons, legendArt } from './cards'
 import { ScoreGems, Sheet, Stepper } from './common'
+import { useGameFeedback, useWakeLock } from './effects'
+import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
 import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
 type Panel =
@@ -24,8 +26,13 @@ interface Props {
 
 export function GameScreen({ state, match, game, dispatch }: Props) {
   const [panel, setPanel] = useState<Panel>(null)
+  // A tela de VS aparece só quando o jogo acabou de começar.
+  const [intro, setIntro] = useState(() => game.log.length === 1 && !game.result)
+  const closeIntro = useCallback(() => setIntro(false), [])
   const act = (action: GameAction) => dispatch({ type: 'match', action: { type: 'game', action } })
   const flipped = (p: PlayerIndex) => state.tableMode && p === 1
+  useGameFeedback(game, state.settings)
+  useWakeLock(state.settings.keepAwake)
 
   return (
     <main className="game">
@@ -76,6 +83,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
         <MenuSheet state={state} game={game} act={act} dispatch={dispatch} onClose={() => setPanel(null)} />
       )}
       {game.result && <GameOver match={match} game={game} dispatch={dispatch} />}
+      {intro && <VersusIntro match={match} game={game} onDone={closeIntro} />}
     </main>
   )
 }
@@ -93,10 +101,13 @@ function PlayerPanel(props: {
   const legend = findLegend(props.legend)
   const isActive = game.active === player
   const power = Object.values(p.power).reduce((a, b) => a + b, 0)
+  // Com lenda, o brilho do painel usa as cores dos domínios dela.
+  const [accentA, accentB] = accentColors(legend, player)
 
   return (
     <section
       className={`panel p${player} ${isActive ? 'active' : ''} ${props.flipped ? 'flipped' : ''} ${legend ? 'with-legend' : ''}`}
+      style={legend ? ({ '--pc-a': accentA, '--pc-b': accentB } as CSSProperties) : undefined}
       aria-label={`Painel de ${p.name}`}
     >
       {legend && <div className="panel-art" style={legendArt(legend.name, 640)} aria-hidden="true" />}
@@ -122,7 +133,10 @@ function PlayerPanel(props: {
           −
         </button>
         <div className="score" aria-live="polite">
-          <b>{p.points}</b>
+          {/* A key reinicia a animação a cada mudança de pontos. */}
+          <b key={p.points} className="bump">
+            {p.points}
+          </b>
           <small>/ {game.victoryScore}</small>
         </div>
         <button className="score-btn" onClick={() => act({ type: 'adjustPoints', player, delta: 1 })} aria-label={`Dar 1 ponto a ${p.name} por efeito`} title="Ponto por efeito de carta">
@@ -146,6 +160,7 @@ function BattlefieldCard({ game, bf, onClick }: { game: GameState; bf: Battlefie
   const ctrl = bf.controller
   return (
     <button className={`bf ${ctrl === null ? 'free' : `ctrl${ctrl}`} ${findBattlefield(bf.name) ? 'has-art' : ''}`} style={battlefieldArt(bf.name)} onClick={onClick}>
+      {ctrl !== null && <span key={`wave${ctrl}`} className={`bf-wave c${ctrl}`} aria-hidden="true" />}
       <span className="bf-name">{bf.name}</span>
       <span className="bf-ctrl">{ctrl === null ? 'Sem controle' : `Controle: ${game.players[ctrl].name}`}</span>
       <span className="bf-scored">
@@ -300,6 +315,12 @@ function Toast({ game }: { game: GameState }) {
   )
 }
 
+const SETTING_LABELS: [keyof Settings, string, string][] = [
+  ['sound', 'Sons', 'Ao pontuar, passar a vez e vencer.'],
+  ['vibration', 'Vibração', 'Vibra ao pontuar (Android).'],
+  ['keepAwake', 'Tela sempre ligada', 'Durante a partida, a tela não apaga.'],
+]
+
 function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
   const { game, act } = props
   const close = (fn: () => void) => () => {
@@ -308,6 +329,23 @@ function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameActio
   }
   return (
     <Sheet title="Menu" onClose={props.onClose}>
+      <h3>Preferências</h3>
+      <div className="toggles">
+        {SETTING_LABELS.map(([key, label, hint]) => (
+          <label key={key} className="toggle">
+            <span>
+              <b>{label}</b>
+              <small>{hint}</small>
+            </span>
+            <input
+              type="checkbox"
+              checked={props.state.settings[key]}
+              onChange={(e) => props.dispatch({ type: 'setting', key, value: e.target.checked })}
+            />
+          </label>
+        ))}
+      </div>
+      <h3>Partida</h3>
       <div className="actions">
         <button className="action" onClick={close(() => props.dispatch({ type: 'toggleTableMode' }))}>
           <b>{props.state.tableMode ? 'Não girar' : 'Girar'} o painel do oponente</b>
@@ -345,38 +383,15 @@ function GameOver({ match, game, dispatch }: { match: MatchState; game: GameStat
   const champion = matchWinner(after)
 
   return (
-    <div className="overlay" role="dialog" aria-label="Fim de jogo">
-      <div className="overlay-card">
-        <h2>
-          {result.kind === 'draw' ? (
-            'Empate'
-          ) : (
-            <>
-              <span className={`c${result.winner}`}>{game.players[result.winner].name}</span> venceu o jogo!
-            </>
-          )}
-        </h2>
-        <p className="final-score">
-          <span className="c0">{game.players[0].points}</span> × <span className="c1">{game.players[1].points}</span>
-        </p>
-        {match.format === 'match' && (
-          <p>
-            Partida: {match.players[0].name} {wins[0]} × {wins[1]} {match.players[1].name}
-            {over && champion !== null && (
-              <>
-                <br />
-                <b className={`c${champion}`}>{match.players[champion].name} venceu a partida!</b>
-              </>
-            )}
-          </p>
-        )}
-        <button className="primary big" onClick={() => dispatch({ type: 'match', action: { type: 'finishGame' } })}>
-          {over ? 'Ver resultado' : 'Próximo jogo'}
-        </button>
-        <button className="link" onClick={() => dispatch({ type: 'undo' })}>
-          ↶ Desfazer última ação
-        </button>
-      </div>
-    </div>
+    <VictoryScreen
+      match={match}
+      game={game}
+      result={result}
+      matchWins={wins}
+      matchOver={over}
+      champion={champion}
+      onContinue={() => dispatch({ type: 'match', action: { type: 'finishGame' } })}
+      onUndo={() => dispatch({ type: 'undo' })}
+    />
   )
 }

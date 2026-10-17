@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { availableBattlefields, firstPlayerRule, gameWins, type MatchState } from '../engine/match'
 import type { PlayerIndex } from '../engine/types'
 import type { AppAction } from '../store'
 import { BattlefieldTile } from './cards'
 import { Brand } from './common'
+import { CoinFlip } from './spectacle'
 
 const pick = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)]
 
@@ -18,6 +19,8 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
   )
   const [decider, setDecider] = useState<PlayerIndex | null>(rule.kind === 'chooser' ? rule.player : null)
   const [firstPlayer, setFirstPlayer] = useState<PlayerIndex | null>(rule.kind === 'fixed' ? rule.firstPlayer : null)
+  const [coinFlipping, setCoinFlipping] = useState(false)
+  const onCoinResult = useCallback((p: PlayerIndex) => setDecider(p), [])
 
   const name = (p: PlayerIndex) => match.players[p].name
   const wins = gameWins(match)
@@ -75,25 +78,33 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
           <p>
             O último jogo empatou, então <b className={`c${rule.firstPlayer}`}>{name(rule.firstPlayer)}</b> começa de novo.
           </p>
-        ) : decider === null ? (
-          <button className="secondary" onClick={() => setDecider(pick([0, 1] as PlayerIndex[]))}>
-            🎲 Sortear quem decide
-          </button>
         ) : (
           <>
-            <p>
-              <b className={`c${decider}`}>{name(decider)}</b>{' '}
-              {rule.kind === 'chooser' ? 'perdeu o último jogo e decide:' : 'foi sorteado e decide:'}
-            </p>
-            <div className="segmented">
-              {([0, 1] as const).map((p) => (
-                <button key={p} className={firstPlayer === p ? 'on' : ''} onClick={() => setFirstPlayer(p)}>
-                  {name(p)} começa
+            {/* A moeda fica sempre nesta posição, para não ser recriada (e sortear de novo) ao terminar. */}
+            {coinFlipping && <CoinFlip names={[name(0), name(1)]} onResult={onCoinResult} />}
+            {decider === null ? (
+              !coinFlipping && (
+                <button className="secondary" onClick={() => setCoinFlipping(true)}>
+                  🪙 Sortear quem decide
                 </button>
-              ))}
-            </div>
-            {firstPlayer !== null && (
-              <p className="hint">{name(firstPlayer === 0 ? 1 : 0)} joga em segundo e canaliza 1 runa extra no primeiro turno.</p>
+              )
+            ) : (
+              <>
+                <p>
+                  <b className={`c${decider}`}>{name(decider)}</b>{' '}
+                  {rule.kind === 'chooser' ? 'perdeu o último jogo e decide:' : 'foi sorteado e decide:'}
+                </p>
+                <div className="segmented">
+                  {([0, 1] as const).map((p) => (
+                    <button key={p} className={firstPlayer === p ? 'on' : ''} onClick={() => setFirstPlayer(p)}>
+                      {name(p)} começa
+                    </button>
+                  ))}
+                </div>
+                {firstPlayer !== null && (
+                  <p className="hint">{name(firstPlayer === 0 ? 1 : 0)} joga em segundo e canaliza 1 runa extra no primeiro turno.</p>
+                )}
+              </>
             )}
           </>
         )}

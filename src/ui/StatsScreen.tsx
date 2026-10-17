@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { cardImage, findLegend } from '../data/cards'
 import { gameWins, type MatchState } from '../engine/match'
-import { computeStats, isMatchRecord, matchOutcome, winRate, type MatchRecord, type StatRow, type Tally } from '../engine/stats'
+import { computeStats, isMatchRecord, matchOutcome, matchupMatrix, winRate, winRateTimeline, type MatchRecord, type StatRow, type Tally } from '../engine/stats'
 import type { AppAction } from '../store'
 import { battlefieldArt, DomainIcons } from './cards'
+import { MatchupHeatmap, TurnOrderBars, WinRateChart } from './charts'
 import { Brand } from './common'
 
 const percent = (t: Tally) => {
@@ -101,7 +102,9 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
     }
   }
 
-  const visible = myLegend ? records.filter((r) => r.players[0].legend === myLegend) : records
+  const visible = useMemo(() => (myLegend ? records.filter((r) => r.players[0].legend === myLegend) : records), [records, myLegend])
+  const timeline = useMemo(() => winRateTimeline(records, { myLegend }), [records, myLegend])
+  const matchup = useMemo(() => matchupMatrix(visible), [visible])
 
   return (
     <main className="screen setup stats">
@@ -138,6 +141,25 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
             <SummaryCard title="Começando" tally={stats.goingFirst} unit="jogos" />
             <SummaryCard title="Em segundo" tally={stats.goingSecond} unit="jogos" />
           </div>
+
+          {timeline.length >= 2 && (
+            <section className="card">
+              <h2>Evolução</h2>
+              <WinRateChart points={timeline} />
+            </section>
+          )}
+
+          <section className="card">
+            <h2>Começando × em segundo</h2>
+            <TurnOrderBars first={stats.goingFirst} second={stats.goingSecond} />
+          </section>
+
+          {matchup.myLegends.length > 0 && (
+            <section className="card">
+              <h2>Confrontos</h2>
+              <MatchupHeatmap matchup={matchup} />
+            </section>
+          )}
 
           <Section
             title="Suas lendas"

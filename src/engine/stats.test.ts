@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CompletedGame } from './match'
-import { computeStats, isMatchRecord, matchOutcome, mergeRecords, winRate, type MatchRecord } from './stats'
+import { computeStats, isMatchRecord, matchOutcome, matchupKey, matchupMatrix, mergeRecords, winRate, winRateTimeline, type MatchRecord } from './stats'
 import type { PlayerIndex } from './types'
 
 const game = (winner: PlayerIndex | 'draw', firstPlayer: PlayerIndex, bfs: [string, string] = ['A1', 'B1']): CompletedGame => ({
@@ -77,6 +77,34 @@ describe('estatísticas', () => {
   it('percentual de vitórias conta empates como não vitória', () => {
     expect(winRate({ played: 4, wins: 1, losses: 2, draws: 1 })).toBe(0.25)
     expect(winRate({ played: 0, wins: 0, losses: 0, draws: 0 })).toBeNull()
+  })
+})
+
+describe('gráficos', () => {
+  const a = record('Bruno', 'Loose Cannon', 'Nine-Tailed Fox', [game(0, 0), game(1, 1)])
+  const b = record('Carla', 'Loose Cannon', 'Blind Monk', [game(0, 0)])
+  const c = record('Bruno', 'Daughter of the Void', 'Nine-Tailed Fox', [game('draw', 1)])
+
+  it('evolução da % de vitórias segue a ordem cronológica dos jogos', () => {
+    const t = winRateTimeline([c, a, b]) // fora de ordem de propósito
+    expect(t.map((p) => p.outcome)).toEqual(['win', 'loss', 'win', 'draw'])
+    expect(t.map((p) => p.rate)).toEqual([1, 0.5, 2 / 3, 0.5])
+  })
+
+  it('a evolução respeita o filtro de lenda', () => {
+    expect(winRateTimeline([a, b, c], { myLegend: 'Daughter of the Void' })).toHaveLength(1)
+  })
+
+  it('matriz de confrontos conta jogos por par de lendas, mais jogadas primeiro', () => {
+    const m = matchupMatrix([a, b, c])
+    expect(m.myLegends).toEqual(['Loose Cannon', 'Daughter of the Void'])
+    expect(m.opponentLegends).toEqual(['Nine-Tailed Fox', 'Blind Monk'])
+    expect(m.cells.get(matchupKey('Loose Cannon', 'Nine-Tailed Fox'))).toEqual({ played: 2, wins: 1, losses: 1, draws: 0 })
+    expect(m.cells.get(matchupKey('Daughter of the Void', 'Blind Monk'))).toBeUndefined()
+  })
+
+  it('a matriz ignora partidas sem as duas lendas', () => {
+    expect(matchupMatrix([record('X', 'L', undefined, [game(0, 0)])]).myLegends).toEqual([])
   })
 })
 

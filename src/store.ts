@@ -2,6 +2,17 @@ import { useEffect, useReducer } from 'react'
 import { isMatchOver, matchReducer, type MatchAction, type MatchState } from './engine/match'
 import { mergeRecords, recordFromMatch, type MatchRecord } from './engine/stats'
 
+export interface Settings {
+  /** Sons ao pontuar, passar a vez e vencer (desligado por padrão). */
+  sound: boolean
+  /** Vibração curta ao pontuar (Android). */
+  vibration: boolean
+  /** Mantém a tela ligada durante a partida. */
+  keepAwake: boolean
+}
+
+export const DEFAULT_SETTINGS: Settings = { sound: false, vibration: true, keepAwake: true }
+
 export interface AppState {
   match: MatchState | null
   /** Estados anteriores da partida, para desfazer. */
@@ -10,6 +21,7 @@ export interface AppState {
   tableMode: boolean
   /** Partidas encerradas, da mais recente à mais antiga. */
   records: MatchRecord[]
+  settings: Settings
 }
 
 export type AppAction =
@@ -22,6 +34,7 @@ export type AppAction =
   | { type: 'deleteRecord'; id: string }
   | { type: 'importRecords'; records: MatchRecord[] }
   | { type: 'clearRecords' }
+  | { type: 'setting'; key: keyof Settings; value: boolean }
 
 const STATE_KEY = 'riftbound-companion/v1'
 // As partidas ficam numa chave própria, para não se perderem se o formato do estado mudar.
@@ -65,6 +78,8 @@ function reducer(s: AppState, a: AppAction): AppState {
       return { ...s, records: mergeRecords(s.records, a.records) }
     case 'clearRecords':
       return { ...s, records: [] }
+    case 'setting':
+      return { ...s, settings: { ...s.settings, [a.key]: a.value } }
   }
 }
 
@@ -92,14 +107,15 @@ function load(): AppState {
     history: saved?.history ?? [],
     tableMode: saved?.tableMode ?? true,
     records: read<MatchRecord[]>(RECORDS_KEY) ?? [],
+    settings: { ...DEFAULT_SETTINGS, ...saved?.settings },
   }
 }
 
 /** Estado do app, salvo no aparelho para sobreviver a recarregamentos. */
 export function useAppStore() {
   const [state, dispatch] = useReducer(reducer, undefined, load)
-  const { match, history, tableMode, records } = state
-  useEffect(() => write(STATE_KEY, { match, history, tableMode }), [match, history, tableMode])
+  const { match, history, tableMode, records, settings } = state
+  useEffect(() => write(STATE_KEY, { match, history, tableMode, settings }), [match, history, tableMode, settings])
   useEffect(() => write(RECORDS_KEY, records), [records])
   return [state, dispatch] as const
 }

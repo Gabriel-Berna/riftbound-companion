@@ -71,9 +71,8 @@ export function Brand(props: { title?: ReactNode; subtitle?: ReactNode }) {
 export function ScoreGems(props: { points: number; target: number }) {
   return (
     <div className="gems" aria-hidden="true">
-      {Array.from({ length: props.target }, (_, i) => (
-        <i key={i} className={i < props.points ? 'on' : ''} />
-      ))}
+      {/* A key muda quando a gema acende, reiniciando a animação de brilho. */}
+      {Array.from({ length: props.target }, (_, i) => (i < props.points ? <i key={`on${i}`} className="on" /> : <i key={`off${i}`} />))}
     </div>
   )
 }
