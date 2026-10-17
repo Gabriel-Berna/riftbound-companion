@@ -9,6 +9,10 @@ PWA (React + TypeScript + Vite) de apoio a partidas do TCG Riftbound. Interface 
 - Efeitos: `src/ui/spectacle.tsx` (VS, vitória, moeda), `src/ui/effects.ts` (sons via Web Audio, vibração, Wake Lock), `src/ui/charts.tsx` (gráficos em SVG). Animações respeitam `prefers-reduced-motion`. Artes de lenda são a carta inteira: ampliar e ancorar no topo para mostrar só a ilustração.
 - Navegação (`src/App.tsx`): Início (hub) → Nova partida (duelo) → preparação do jogo → jogo. O perfil (`state.profile`) é atualizado a cada partida e editável em Ajustes.
 - `src/ui/`: telas e componentes. `src/store.ts`: estado do app, desfazer e persistência em localStorage (partida atual em `riftbound-companion/v1`, histórico de partidas em `riftbound-companion/records/v1`, que nunca deve ser apagado por mudanças de formato).
+- Decks salvos em `riftbound-companion/decks/v1`; validação de construção em `src/engine/deck.ts` (CR 103, TR 402). Timer de rodada e tempo esgotado em `src/engine/match.ts` e `game.ts` (TR 408.2).
+- `src/data/rules.ts`: regras rápidas exibidas no app; manter coerente com `docs/regras-riftbound.md`.
+- `public/art/legends/`: cópias locais das artes das lendas, geradas pelo `sync-cards` (a CDN não tem CORS; a imagem de compartilhar e a introdução usam essas).
+- Testes no navegador começam pela introdução de primeiro uso: depois de limpar o localStorage, clicar em "Pular".
 - Estatísticas (`src/engine/stats.ts`): `players[0]` de cada registro é sempre o dono do celular (Jogador 1).
 - Regras oficiais: `docs/regras-riftbound.md` (resumo) e `docs/fontes/` (textos completos, pesquisáveis com grep).
 - Comandos: `npm test`, `npm run build` (inclui `tsc -b`).
