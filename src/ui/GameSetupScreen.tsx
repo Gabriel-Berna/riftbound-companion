@@ -5,6 +5,7 @@ import type { AppAction } from '../store'
 import { BattlefieldTile } from './cards'
 import { Brand } from './common'
 import { CoinFlip } from './spectacle'
+import { RoundClock } from './timer'
 
 const pick = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)]
 
@@ -45,6 +46,11 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
           )
         }
       />
+      {match.timer && (
+        <p className="text-center">
+          <RoundClock match={match} />
+        </p>
+      )}
 
       <section className="card">
         <h2>Battlefields</h2>
@@ -124,7 +130,7 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
         className="primary big"
         disabled={!ready}
         onClick={() =>
-          ready && dispatch({ type: 'match', action: { type: 'startGame', battlefieldNames: [choices[0]!, choices[1]!], firstPlayer: firstPlayer! } })
+          ready && dispatch({ type: 'match', action: { type: 'startGame', battlefieldNames: [choices[0]!, choices[1]!], firstPlayer: firstPlayer!, now: Date.now() } })
         }
       >
         Começar jogo

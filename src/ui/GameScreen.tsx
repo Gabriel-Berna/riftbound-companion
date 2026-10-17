@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { conquerOutcome, runesToChannel, type GameAction } from '../engine/game'
+import { conquerOutcome, extraTurn, EXTRA_TURNS, runesToChannel, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
 import { DOMAINS, type Battlefield, type Domain, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
 import type { AppAction, AppState } from '../store'
@@ -10,6 +10,7 @@ import { useGameFeedback, useWakeLock } from './effects'
 import { LibraryScreen } from './LibraryScreen'
 import { SettingsToggles } from './SettingsScreen'
 import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
+import { RoundClock } from './timer'
 import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
 type Panel =
@@ -61,7 +62,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
             <BattlefieldCard key={bf.id} game={game} bf={bf} onClick={() => setPanel({ kind: 'battlefield', id: bf.id })} />
           ))}
         </div>
-        <TurnStrip game={game} flipped={flipped(game.active)} act={act} />
+        <TurnStrip match={match} game={game} flipped={flipped(game.active)} act={act} />
       </section>
 
       <PlayerPanel game={game} legend={match.players[0].legend} legendArt={match.players[0].legendArt} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
@@ -86,7 +87,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
         </Sheet>
       )}
       {panel?.kind === 'menu' && (
-        <MenuSheet state={state} game={game} act={act} dispatch={dispatch} onClose={() => setPanel(null)} />
+        <MenuSheet state={state} match={match} game={game} act={act} dispatch={dispatch} onClose={() => setPanel(null)} />
       )}
       {panel?.kind === 'library' && <LibraryScreen overlay onClose={() => setPanel(null)} />}
       {game.result && <GameOver match={match} game={game} dispatch={dispatch} />}
@@ -277,17 +278,26 @@ function PoolSheet(props: {
 }
 
 /** Faixa do turno, virada para o jogador da vez. */
-function TurnStrip({ game, flipped, act }: { game: GameState; flipped: boolean; act: (a: GameAction) => void }) {
+function TurnStrip({ match, game, flipped, act }: { match: MatchState; game: GameState; flipped: boolean; act: (a: GameAction) => void }) {
   const extraRune = runesToChannel(game) > 2
+  const extra = extraTurn(game)
+  // Avisos em ordem de prioridade: turnos extras do fim do tempo, runa extra, dica padrão.
+  const note =
+    extra === 0
+      ? { text: 'Tempo esgotado: termine este turno. Depois vêm 3 turnos extras.', emph: true }
+      : extra !== null
+        ? { text: `Turno extra ${extra} de ${EXTRA_TURNS}. Ao fim, vence quem tiver 2+ pontos de vantagem.`, emph: true }
+        : extraRune
+          ? { text: 'Primeiro turno: canalize 3 runas (1 extra).', emph: true }
+          : { text: 'Toque num battlefield para registrar uma conquista.', emph: false }
   return (
     <div className={`turnstrip p${game.active} ${flipped ? 'flipped' : ''}`}>
       <div className="turn-info">
         <span className="turn-head">
           Turno {game.turn} · vez de <b className={`c${game.active}`}>{game.players[game.active].name}</b>
         </span>
-        <span className={extraRune ? 'turn-note emph' : 'turn-note'}>
-          {extraRune ? 'Primeiro turno: canalize 3 runas (1 extra).' : 'Toque num battlefield para registrar uma conquista.'}
-        </span>
+        {match.timer && !match.timeUp && <RoundClock match={match} />}
+        <span className={note.emph ? 'turn-note emph' : 'turn-note'}>{note.text}</span>
       </div>
       <button className="primary next" onClick={() => act({ type: 'passTurn' })}>
         Passar a vez →
@@ -307,7 +317,7 @@ function Toast({ game }: { game: GameState }) {
     const relevant = fresh.filter((e) => e.kind !== 'result')
     // Uma passagem de turno sem pontos não precisa de aviso.
     if (relevant.every((e) => e.kind === 'turn-start')) return
-    const warn = relevant.some((e) => e.kind === 'final-point-blocked' || e.kind === 'already-scored')
+    const warn = relevant.some((e) => e.kind === 'final-point-blocked' || e.kind === 'already-scored' || e.kind === 'time-up')
     setMessage({ lines: relevant.map((e) => describeLog(game, e)), warn })
     const t = setTimeout(() => setMessage(null), warn ? 6000 : 3000)
     return () => clearTimeout(t)
@@ -324,7 +334,7 @@ function Toast({ game }: { game: GameState }) {
 }
 
 
-function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
+function MenuSheet(props: { state: AppState; match: MatchState; game: GameState; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
   const { game, act } = props
   const close = (fn: () => void) => () => {
     fn()
@@ -336,6 +346,17 @@ function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameActio
       <SettingsToggles settings={props.state.settings} dispatch={props.dispatch} />
       <h3>Partida</h3>
       <div className="actions">
+        {props.match.timer?.startedAt != null && !props.match.timeUp && (
+          <button
+            className="action"
+            onClick={close(() =>
+              props.dispatch({ type: 'match', action: { type: props.match.timer?.pausedAt != null ? 'resumeTimer' : 'pauseTimer', now: Date.now() } }),
+            )}
+          >
+            <b>{props.match.timer.pausedAt != null ? '▶ Retomar timer' : '⏸ Pausar timer'}</b>
+            <small>Em torneios o relógio não para; use em partidas casuais.</small>
+          </button>
+        )}
         <button className="action" onClick={close(() => props.dispatch({ type: 'toggleTableMode' }))}>
           <b>{props.state.tableMode ? 'Não girar' : 'Girar'} o painel do oponente</b>
           <small>Para quem joga frente a frente com o celular no meio da mesa.</small>

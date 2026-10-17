@@ -24,7 +24,7 @@ export interface PlayerState {
 }
 
 export type GameResult =
-  | { kind: 'win'; winner: PlayerIndex; reason: 'points' | 'concede' | 'effect' }
+  | { kind: 'win'; winner: PlayerIndex; reason: 'points' | 'concede' | 'effect' | 'time' }
   | { kind: 'draw' }
 
 export type LogEntry =
@@ -38,6 +38,7 @@ export type LogEntry =
   /** `player` sofreu Burn Out; `beneficiary` ganhou o ponto (CR 432). */
   | { kind: 'burn-out'; turn: number; player: PlayerIndex; beneficiary: PlayerIndex; points: number }
   | { kind: 'turn-start'; turn: number; player: PlayerIndex }
+  | { kind: 'time-up'; turn: number; player: PlayerIndex }
   | { kind: 'result'; turn: number; result: GameResult }
 
 export interface GameState {
@@ -54,4 +55,6 @@ export interface GameState {
   scoredThisTurn: [string[], string[]]
   log: LogEntry[]
   result: GameResult | null
+  /** Turno em que o tempo da rodada acabou (TR 408.2); `null` enquanto houver tempo. */
+  timeUpTurn?: number | null
 }

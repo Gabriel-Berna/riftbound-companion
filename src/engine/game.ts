@@ -36,6 +36,8 @@ export type GameAction =
   | { type: 'concede'; player: PlayerIndex }
   /** Vitória concedida por um efeito de carta (ex.: battlefield que dá a vitória com 7+ unidades). */
   | { type: 'winByEffect'; player: PlayerIndex }
+  /** O tempo da rodada acabou durante o jogo (TR 408.2). */
+  | { type: 'timeUp' }
   | { type: 'declareDraw' }
 
 export interface NewGameOptions {
@@ -178,12 +180,38 @@ function apply(s: GameState, a: GameAction): void {
     case 'winByEffect':
       return finish(s, { kind: 'win', winner: a.player, reason: 'effect' })
 
+    case 'timeUp':
+      if (s.timeUpTurn != null) return
+      s.timeUpTurn = s.turn
+      log(s, { kind: 'time-up', turn: s.turn, player: s.active })
+      return
+
     case 'declareDraw':
       return finish(s, { kind: 'draw' })
   }
 }
 
+/** Turnos extras depois do fim do tempo (TR 408.2.a). */
+export const EXTRA_TURNS = 3
+
+/**
+ * Situação do tempo: o turno em que o tempo acabou ainda está terminando (`extra: 0`)
+ * ou o jogo está no turno extra 1, 2 ou 3. `null` enquanto houver tempo.
+ */
+export function extraTurn(s: GameState): number | null {
+  return s.timeUpTurn == null ? null : s.turn - s.timeUpTurn
+}
+
+/** Fim dos turnos extras: vence quem tiver 2 ou mais pontos de vantagem; senão, empate (TR 408.2.b). */
+function finishByTime(s: GameState): void {
+  const [a, b] = s.players.map((p) => p.points)
+  if (a - b >= 2) finish(s, { kind: 'win', winner: 0, reason: 'time' })
+  else if (b - a >= 2) finish(s, { kind: 'win', winner: 1, reason: 'time' })
+  else finish(s, { kind: 'draw' })
+}
+
 function passTurn(s: GameState): void {
+  if (extraTurn(s) === EXTRA_TURNS) return finishByTime(s)
   // Ending Phase: o rune pool esvazia (CR 317.2.d).
   s.players.forEach(clearPool)
   s.active = other(s.active)

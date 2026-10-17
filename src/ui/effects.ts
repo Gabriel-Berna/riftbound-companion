@@ -73,7 +73,7 @@ export function useGameFeedback(game: GameState, settings: Settings): void {
     if (kinds.includes('result')) {
       if (settings.sound) playSound('victory')
       if (settings.vibration) vibrate([80, 60, 80, 60, 200])
-    } else if (kinds.includes('final-point-blocked') || kinds.includes('already-scored')) {
+    } else if (kinds.includes('final-point-blocked') || kinds.includes('already-scored') || kinds.includes('time-up')) {
       if (settings.sound) playSound('warn')
       if (settings.vibration) vibrate([30, 60, 30])
     } else if (gained) {

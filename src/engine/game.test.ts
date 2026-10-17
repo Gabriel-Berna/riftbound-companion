@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { conquerOutcome, createGame, gameReducer, runesToChannel, type GameAction } from './game'
+import { conquerOutcome, createGame, extraTurn, gameReducer, runesToChannel, type GameAction } from './game'
 import type { GameState } from './types'
 
 const newGame = (firstPlayer: 0 | 1 = 0) =>
@@ -172,6 +172,43 @@ describe('battlefields que alteram a vitória', () => {
 
   it('vitória por efeito de carta encerra o jogo', () => {
     expect(run(newGame(0), { type: 'winByEffect', player: 1 }).result).toEqual({ kind: 'win', winner: 1, reason: 'effect' })
+  })
+})
+
+describe('tempo da rodada (TR 408.2)', () => {
+  it('o jogador da vez termina o turno e vêm mais 3 turnos', () => {
+    let s = run(newGame(0), pass) // turno 2
+    s = run(s, { type: 'timeUp' })
+    expect(extraTurn(s)).toBe(0)
+    s = run(s, pass, pass)
+    expect(extraTurn(s)).toBe(2)
+    expect(s.result).toBeNull()
+    s = run(s, pass) // turno extra 3
+    expect(extraTurn(s)).toBe(3)
+    expect(s.result).toBeNull()
+  })
+
+  it('ao fim dos turnos extras, vence quem tem 2+ pontos de vantagem', () => {
+    let s = withPoints(run(newGame(0), { type: 'timeUp' }), 5, 3)
+    s = run(s, pass, pass, pass, pass)
+    expect(s.result).toEqual({ kind: 'win', winner: 0, reason: 'time' })
+  })
+
+  it('com menos de 2 pontos de vantagem, o jogo empata', () => {
+    let s = withPoints(run(newGame(0), { type: 'timeUp' }), 5, 4)
+    s = run(s, pass, pass, pass, pass)
+    expect(s.result).toEqual({ kind: 'draw' })
+  })
+
+  it('o jogo ainda pode terminar normalmente durante os turnos extras', () => {
+    let s = withPoints(run(newGame(0), { type: 'timeUp' }, pass), 4, 7)
+    s = run(s, { type: 'adjustPoints', player: 1, delta: 1 })
+    expect(s.result).toEqual({ kind: 'win', winner: 1, reason: 'points' })
+  })
+
+  it('o fim do tempo só conta uma vez', () => {
+    let s = run(newGame(0), { type: 'timeUp' }, pass, { type: 'timeUp' })
+    expect(s.timeUpTurn).toBe(1)
   })
 })
 

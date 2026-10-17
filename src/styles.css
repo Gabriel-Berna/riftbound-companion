@@ -3098,3 +3098,37 @@ h3 {
   object-fit: cover;
   background: var(--surface-3);
 }
+
+/* ---------- Timer de rodada ---------- */
+
+.timer-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.timer-choice .hint {
+  margin: 0;
+}
+
+.round-clock {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--cream);
+  font-variant-numeric: tabular-nums;
+}
+
+.round-clock.low {
+  color: var(--warn);
+}
+
+.round-clock.up {
+  color: var(--danger);
+}
+
+.round-clock.paused {
+  color: var(--muted);
+}

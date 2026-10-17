@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { createMatch, isMatchOver } from './engine/match'
+import { useCallback, useMemo, useState } from 'react'
+import { createMatch, isMatchOver, type MatchAction } from './engine/match'
 import { useAppStore } from './store'
 import { GameScreen } from './ui/GameScreen'
 import { GameSetupScreen } from './ui/GameSetupScreen'
@@ -10,6 +10,7 @@ import { MatchOverScreen } from './ui/MatchOverScreen'
 import { NewMatchScreen } from './ui/NewMatchScreen'
 import { SettingsScreen } from './ui/SettingsScreen'
 import { StatsScreen } from './ui/StatsScreen'
+import { useRoundClock } from './ui/timer'
 
 type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings'
 
@@ -18,6 +19,8 @@ export function App() {
   const [view, setView] = useState<View>('home')
   const { match, records } = state
   const home = () => setView('home')
+  const matchDispatch = useCallback((action: MatchAction) => dispatch({ type: 'match', action }), [dispatch])
+  useRoundClock(match, matchDispatch)
 
   // Você: o perfil salvo ou, na falta dele, você na última partida registrada.
   const profile = state.profile ?? records[0]?.players[0] ?? null

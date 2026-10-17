@@ -53,7 +53,7 @@ export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchStat
         </ol>
       </section>
 
-      <button className="primary big" onClick={() => dispatch({ type: 'newMatch', match: createMatch(match.format, match.players) })}>
+      <button className="primary big" onClick={() => dispatch({ type: 'newMatch', match: createMatch(match.format, match.players, match.timer?.minutes) })}>
         Revanche
       </button>
       <button className="secondary" onClick={() => dispatch({ type: 'quit' })}>

@@ -125,7 +125,9 @@ export function VictoryScreen(props: {
               </span>
             )}
             {result.kind === 'win' && result.reason !== 'points' && (
-              <span className="victory-reason">{result.reason === 'concede' ? 'por concessão' : 'por efeito de carta'}</span>
+              <span className="victory-reason">
+                {result.reason === 'concede' ? 'por concessão' : result.reason === 'time' ? 'por 2+ pontos de vantagem no fim do tempo' : 'por efeito de carta'}
+              </span>
             )}
           </>
         )}

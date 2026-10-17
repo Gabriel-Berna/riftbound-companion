@@ -7,6 +7,7 @@ import {
   isMatchOver,
   matchReducer,
   matchWinner,
+  timeLeft,
   type MatchAction,
   type MatchState,
 } from './match'
@@ -74,6 +75,41 @@ describe('melhor de 3 (CR 488)', () => {
   it('não encerra um jogo sem resultado', () => {
     const m = run(newMatch(), { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0 })
     expect(run(m, { type: 'finishGame' })).toBe(m)
+  })
+})
+
+describe('relógio da rodada (TR 408)', () => {
+  const timed = () => createMatch('match', newMatch().players, 60)
+
+  it('começa com o primeiro jogo e desconta as pausas', () => {
+    let m = run(timed(), { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0, now: 0 })
+    expect(timeLeft(m, 10 * 60_000)).toBe(50 * 60_000)
+    m = run(m, { type: 'pauseTimer', now: 10 * 60_000 }, { type: 'resumeTimer', now: 15 * 60_000 })
+    expect(timeLeft(m, 20 * 60_000)).toBe(45 * 60_000)
+  })
+
+  it('sem timer, não há tempo restante', () => {
+    expect(timeLeft(run(newMatch(), { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0, now: 0 }), 1000)).toBeNull()
+  })
+
+  it('tempo esgotado durante o jogo inicia os turnos extras', () => {
+    const m = run(timed(), { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0, now: 0 }, { type: 'timeUp' })
+    expect(m.game?.timeUpTurn).toBe(1)
+    expect(isMatchOver(m)).toBe(false)
+  })
+
+  it('tempo esgotado entre jogos encerra a partida: vence quem tem mais vitórias (TR 408.2.d, 408.3.a)', () => {
+    let m = playGame(timed(), ['A1', 'B1'], 0, 1)
+    m = run(m, { type: 'timeUp' })
+    expect(isMatchOver(m)).toBe(true)
+    expect(matchWinner(m)).toBe(1)
+    expect(run(m, { type: 'startGame', battlefieldNames: ['A2', 'B2'], firstPlayer: 0 }).game).toBeNull()
+  })
+
+  it('tempo esgotado entre jogos com vitórias iguais é empate', () => {
+    const m = run(playGame(timed(), ['A1', 'B1'], 0, 'draw'), { type: 'timeUp' })
+    expect(isMatchOver(m)).toBe(true)
+    expect(matchWinner(m)).toBeNull()
   })
 })
 

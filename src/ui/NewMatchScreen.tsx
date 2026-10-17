@@ -54,6 +54,7 @@ export function NewMatchScreen(props: {
 }) {
   const { dispatch } = props
   const [format, setFormat] = useState<MatchFormat>('match')
+  const [timer, setTimer] = useState(0)
   const [drafts, setDrafts] = useState<[Draft, Draft]>(() => [draftFrom(props.profile), emptyDraft()])
   const [picking, setPicking] = useState<{ player: 0 | 1; slot: number } | null>(null)
   const [pickingLegend, setPickingLegend] = useState<0 | 1 | null>(null)
@@ -82,7 +83,7 @@ export function NewMatchScreen(props: {
     let p1 = toPlayer(drafts[0], 'Jogador 1', 'A')
     const p2 = toPlayer(drafts[1], 'Jogador 2', 'B')
     if (p1.name === p2.name) p1 = { ...p1, name: `${p1.name} (1)` }
-    dispatch({ type: 'newMatch', match: createMatch(format, [p1, p2]) })
+    dispatch({ type: 'newMatch', match: createMatch(format, [p1, p2], timer || undefined) })
   }
 
   const recentOpponents = [...props.opponents.keys()].slice(0, 4)
@@ -104,6 +105,17 @@ export function NewMatchScreen(props: {
         <button role="radio" aria-checked={format === 'duel'} className={format === 'duel' ? 'on' : ''} onClick={() => setFormat('duel')}>
           Jogo único
         </button>
+      </div>
+
+      <div className="timer-choice">
+        <span className="hint">⏱ Timer de rodada</span>
+        <div className="chips">
+          {[0, 50, 60].map((min) => (
+            <button key={min} className={`chip ${timer === min ? 'on' : ''}`} onClick={() => setTimer(min)}>
+              {min ? `${min} min` : 'Sem timer'}
+            </button>
+          ))}
+        </div>
       </div>
 
       <section className="duel">
