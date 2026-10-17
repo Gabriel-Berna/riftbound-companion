@@ -1530,3 +1530,8 @@ h3 {
 .field input[type='date'] {
   color-scheme: dark;
 }
+
+.link.danger-link {
+  color: var(--danger);
+  margin-top: 0.5rem;
+}

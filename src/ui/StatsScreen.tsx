@@ -215,6 +215,23 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
         }}
       />
       <p className="hint text-center">Os dados ficam só neste aparelho. Exporte um backup de vez em quando.</p>
+      {records.length > 0 && (
+        <button
+          className="link danger-link"
+          onClick={() => {
+            const n = records.length
+            const ok =
+              confirm(`Apagar todas as estatísticas? Isso remove ${n} partida${n > 1 ? 's' : ''} e não pode ser desfeito.\n\nSe quiser guardar os dados, cancele e use "Exportar backup" antes.`) &&
+              confirm('Tem certeza? Todas as partidas serão apagadas deste aparelho.')
+            if (ok) {
+              setMyLegend(undefined)
+              dispatch({ type: 'clearRecords' })
+            }
+          }}
+        >
+          Apagar todas as estatísticas
+        </button>
+      )}
     </main>
   )
 }

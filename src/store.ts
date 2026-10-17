@@ -21,6 +21,7 @@ export type AppAction =
   | { type: 'addRecord'; record: MatchRecord }
   | { type: 'deleteRecord'; id: string }
   | { type: 'importRecords'; records: MatchRecord[] }
+  | { type: 'clearRecords' }
 
 const STATE_KEY = 'riftbound-companion/v1'
 // As partidas ficam numa chave própria, para não se perderem se o formato do estado mudar.
@@ -62,6 +63,8 @@ function reducer(s: AppState, a: AppAction): AppState {
       return { ...s, records: s.records.filter((r) => r.id !== a.id) }
     case 'importRecords':
       return { ...s, records: mergeRecords(s.records, a.records) }
+    case 'clearRecords':
+      return { ...s, records: [] }
   }
 }
 
