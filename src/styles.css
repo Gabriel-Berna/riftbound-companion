@@ -3262,6 +3262,18 @@ h3 {
   font-weight: 700;
 }
 
+.deck-imported {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.deck-group.sideboard {
+  margin-top: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--gold-soft);
+}
+
 .deck-group h3 {
   font-family: var(--display);
   font-size: 0.8rem;

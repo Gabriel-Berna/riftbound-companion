@@ -22,7 +22,7 @@ const CARDS: DeckCard[] = [
   card('Chaos Rune', 'rune', ['chaos']),
   card('Unforgiven', 'legend', ['calm', 'chaos']),
   card('Unforgiven', 'gear', ['calm']),
-  card('Loose Cannon', 'legend', ['fury', 'chaos']),
+  card('Loose Cannon', 'legend', ['fury', 'chaos'], { tags: ['Jinx'] }),
   card("Targon's Peak", 'battlefield', []),
   card('Sand Soldier', 'unit', [], { super: 'token' }),
 ]
@@ -93,6 +93,29 @@ describe('validação de deck (CR 103, TR 402)', () => {
   })
 })
 
+describe('sideboard (TR 403, 601.1.c)', () => {
+  it('fica fora do Main Deck e aceita até 10 cartas', () => {
+    const d = { ...deck(legalCards.map((e) => (e.name === 'Zaun Bomber' ? { ...e, count: 3 } : e))), sideboard: [{ name: 'Get Excited!', count: 0 }] }
+    expect(validateDeck(d, JINX, lookup).mainCount).toBe(12)
+    const big = validateDeck({ ...d, sideboard: [{ name: 'Zaun Bomber', count: 11 }] }, JINX, lookup)
+    expect(big.sideboardCount).toBe(11)
+    expect(big.issues.map((i) => i.text)).toContain('Sideboard com 11 cartas (máximo 10).')
+  })
+
+  it('soma cópias do Main Deck e do sideboard e só aceita cartas de Main Deck', () => {
+    const r = validateDeck(
+      { ...deck([{ name: 'Get Excited!', count: 3 }]), sideboard: [{ name: 'Get Excited!', count: 1 }, { name: 'Fury Rune', count: 1 }, { name: 'Calm Monk', count: 1 }] },
+      JINX,
+      lookup,
+    )
+    const texts = r.issues.map((i) => i.text)
+    expect(texts).toContain('Get Excited!: 4 cópias somando o sideboard (máximo 3).')
+    expect(texts).toContain('Fury Rune não pode estar no sideboard.')
+    expect(texts).toContain('Fora dos domínios da lenda: Calm Monk.')
+    expect(r.runeCount).toBe(0)
+  })
+})
+
 describe('lista colada', () => {
   it('lê formatos "3 Nome", "3x Nome" e "Nome x3", somando repetidas', () => {
     const r = parseDecklist('3 Jinx, Rebel\n2x Get Excited!\nGet Excited! x1\n6 fury rune', CARDS)
@@ -117,11 +140,42 @@ describe('lista colada', () => {
     expect(parseDecklist('2 Carta Inventada\nMain Deck:', CARDS).unknown).toEqual(['Carta Inventada'])
   })
 
+  it('lê o formato do Piltover Archive: lenda "Campeão, Título", seção Champion e Sideboard separado', () => {
+    const text = [
+      'Legend:',
+      '1 Jinx, Loose Cannon',
+      'Champion:',
+      '1 Jinx, Rebel',
+      'MainDeck:',
+      '3 Get Excited!',
+      'Battlefields:',
+      "1 Targon's Peak",
+      'Runes:',
+      '6 Fury Rune',
+      'Sideboard:',
+      '2 Zaun Bomber',
+      '1 Get Excited!',
+    ].join('\n')
+    const r = parseDecklist(text, CARDS)
+    expect(r.legend).toBe('Loose Cannon')
+    expect(r.battlefields).toEqual(["Targon's Peak"])
+    expect(r.entries).toEqual([
+      { name: 'Jinx, Rebel', count: 1 },
+      { name: 'Get Excited!', count: 3 },
+      { name: 'Fury Rune', count: 6 },
+    ])
+    expect(r.sideboard).toEqual([
+      { name: 'Zaun Bomber', count: 2 },
+      { name: 'Get Excited!', count: 1 },
+    ])
+  })
+
   it('exporta no formato que ela mesma lê', () => {
-    const d = deck([{ name: 'Jinx, Rebel', count: 3 }], ["Targon's Peak", '', ''])
+    const d = { ...deck([{ name: 'Jinx, Rebel', count: 3 }], ["Targon's Peak", '', '']), sideboard: [{ name: 'Zaun Bomber', count: 2 }] }
     const back = parseDecklist(exportDecklist(d, 'Loose Cannon'), CARDS)
     expect(back.legend).toBe('Loose Cannon')
     expect(back.battlefields).toEqual(["Targon's Peak"])
     expect(back.entries).toEqual(d.cards)
+    expect(back.sideboard).toEqual(d.sideboard)
   })
 })

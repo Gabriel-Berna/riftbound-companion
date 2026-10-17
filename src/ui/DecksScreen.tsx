@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { findLegend, imageUrl, legendImage } from '../data/cards'
+import { findLegend, imageUrl, legendImage, type LegendCard } from '../data/cards'
 import { EMPTY_FILTER, filterLibrary, loadLibrary, type LibraryCard } from '../data/library'
 import { exportDecklist, parseDecklist, validateDeck, type Deck, type DeckEntry } from '../engine/deck'
 import { newId, type AppAction } from '../store'
@@ -15,6 +15,8 @@ const GROUPS: [string, (c: LibraryCard | undefined) => boolean][] = [
   ['Runas', (c) => c?.type === 'rune'],
   ['Outras', (c) => !c || !['unit', 'spell', 'gear', 'rune'].includes(c.type)],
 ]
+
+const legendLabel = (l: LegendCard) => `${l.champion} (${l.name})`
 
 export const newDeck = (): Deck => ({ id: newId(), name: '', battlefields: ['', '', ''], cards: [], updatedAt: new Date().toISOString() })
 
@@ -34,7 +36,7 @@ function legendInfo(deck: Deck) {
 }
 
 /** Lista de decks salvos. */
-export function DecksScreen(props: { decks: Deck[]; onOpen: (deck: Deck) => void; onBack: () => void }) {
+export function DecksScreen(props: { decks: Deck[]; onOpen: (deck: Deck, paste?: boolean) => void; onBack: () => void }) {
   const { byName } = useLibrary()
   return (
     <main className="screen setup">
@@ -75,8 +77,11 @@ export function DecksScreen(props: { decks: Deck[]; onOpen: (deck: Deck) => void
           )
         })}
       </div>
-      <button className="primary big" onClick={() => props.onOpen(newDeck())}>
-        + Novo deck
+      <button className="primary big" onClick={() => props.onOpen(newDeck(), true)}>
+        Importar lista
+      </button>
+      <button className="secondary" onClick={() => props.onOpen(newDeck())}>
+        + Montar deck carta por carta
       </button>
     </main>
   )
@@ -125,12 +130,13 @@ function AddCardSheet(props: {
 }
 
 /** Edição de um deck: nome, lenda, battlefields e lista de cartas com validação. */
-export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: AppAction) => void; onClose: () => void }) {
+export function DeckEditor(props: { deck: Deck; saved: boolean; startWithPaste?: boolean; dispatch: (a: AppAction) => void; onClose: () => void }) {
   const [deck, setDeck] = useState<Deck>(props.deck)
   const [dirty, setDirty] = useState(false)
-  const [sheet, setSheet] = useState<'legend' | 'art' | 'add' | 'paste' | { bf: number } | null>(null)
+  const [sheet, setSheet] = useState<'legend' | 'art' | 'add' | 'paste' | { bf: number } | null>(props.startWithPaste ? 'paste' : null)
   const [pasteText, setPasteText] = useState('')
   const [pasteResult, setPasteResult] = useState<string | null>(null)
+  const [imported, setImported] = useState<string | null>(null)
   const { cards, byName } = useLibrary()
   const legend = findLegend(deck.legend)
 
@@ -138,8 +144,10 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
     setDeck((d) => ({ ...d, ...patch }))
     setDirty(true)
   }
-  const setCount = (name: string, count: number) =>
-    change({ cards: count <= 0 ? deck.cards.filter((e) => e.name !== name) : deck.cards.some((e) => e.name === name) ? deck.cards.map((e) => (e.name === name ? { ...e, count } : e)) : [...deck.cards, { name, count }] })
+  const withCount = (list: DeckEntry[], name: string, count: number) =>
+    count <= 0 ? list.filter((e) => e.name !== name) : list.some((e) => e.name === name) ? list.map((e) => (e.name === name ? { ...e, count } : e)) : [...list, { name, count }]
+  const setCount = (name: string, count: number) => change({ cards: withCount(deck.cards, name, count) })
+  const setSideCount = (name: string, count: number) => change({ sideboard: withCount(deck.sideboard ?? [], name, count) })
 
   const report = useMemo(() => (cards ? validateDeck(deck, legendInfo(deck), (n) => byName.get(n)) : null), [cards, deck, byName])
 
@@ -156,19 +164,30 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
   const importList = () => {
     if (!cards) return
     const parsed = parseDecklist(pasteText, cards)
-    if (!parsed.entries.length && !parsed.legend && !parsed.battlefields.length) {
+    if (!parsed.entries.length && !parsed.sideboard.length && !parsed.legend && !parsed.battlefields.length) {
       setPasteResult('Nenhuma carta reconhecida. Use uma linha por carta, como "3 Jinx, Rebel".')
       return
     }
     const bfs = parsed.battlefields.slice(0, 3)
+    // A lista manda: se trouxer outra lenda, ela substitui a escolhida (e a arte volta à padrão).
+    const newLegend = parsed.legend && parsed.legend !== deck.legend ? findLegend(parsed.legend) : undefined
+    const hasCards = parsed.entries.length > 0 || parsed.sideboard.length > 0
     change({
-      cards: parsed.entries.length ? parsed.entries : deck.cards,
-      ...(parsed.legend && { legend: parsed.legend, legendArt: undefined }),
+      cards: hasCards ? parsed.entries : deck.cards,
+      sideboard: hasCards ? parsed.sideboard : deck.sideboard,
+      ...(newLegend && { legend: parsed.legend, legendArt: undefined }),
       ...(bfs.length && { battlefields: [bfs[0] ?? '', bfs[1] ?? '', bfs[2] ?? ''] as Deck['battlefields'] }),
     })
-    setPasteResult(
-      parsed.unknown.length ? `Importado. Não reconhecidas: ${parsed.unknown.join(', ')}.` : `Importado: ${parsed.entries.reduce((n, e) => n + e.count, 0)} cartas.`,
-    )
+    const total = (list: DeckEntry[]) => list.reduce((n, e) => n + e.count, 0)
+    const notes = [
+      newLegend && legend && `Lenda trocada para ${legendLabel(newLegend)}, que veio na lista.`,
+      parsed.unknown.length && `Não reconhecidas: ${parsed.unknown.join(', ')}.`,
+    ].filter(Boolean)
+    setPasteResult(notes.join(' ') || null)
+    if (!parsed.unknown.length) setSheet(null)
+    const runes = total(parsed.entries.filter((e) => byName.get(e.name)?.type === 'rune'))
+    const parts = [`${total(parsed.entries) - runes} cartas`, runes && `${runes} runas`, parsed.sideboard.length && `${total(parsed.sideboard)} no sideboard`].filter(Boolean)
+    setImported(`Importado: ${parts.join(', ')}.${notes.length ? ' ' + notes.join(' ') : ''}`)
   }
 
   const copyList = async () => {
@@ -181,7 +200,11 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
     }
   }
 
-  const grouped = GROUPS.map(([title, test]) => [title, deck.cards.filter((e) => test(byName.get(e.name)))] as [string, DeckEntry[]]).filter(([, list]) => list.length)
+  type Group = [string, DeckEntry[], (name: string, count: number) => void]
+  const grouped = [
+    ...GROUPS.map(([title, test]): Group => [title, deck.cards.filter((e) => test(byName.get(e.name))), setCount]),
+    ['Sideboard', deck.sideboard ?? [], setSideCount] as Group,
+  ].filter(([, list]) => list.length)
 
   return (
     <main className="screen setup deck-editor">
@@ -230,10 +253,12 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
             <span className={report.mainCount === 40 ? 'ok' : ''}>Main Deck {report.mainCount}/40</span>
             <span className={report.runeCount === 12 ? 'ok' : ''}>Runas {report.runeCount}/12</span>
             <span className={report.battlefieldCount === 3 ? 'ok' : ''}>Battlefields {report.battlefieldCount}/3</span>
+            {report.sideboardCount > 0 && <span className={report.sideboardCount <= 10 ? 'ok' : ''}>Sideboard {report.sideboardCount}/10</span>}
           </div>
         ) : (
           <p className="hint">Carregando a biblioteca…</p>
         )}
+        {imported && <p className="deck-imported">{imported}</p>}
         {report && report.issues.length > 0 && (
           <ul className="deck-issues">
             {report.issues.map((i, k) => (
@@ -254,8 +279,8 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
           </button>
         </div>
 
-        {grouped.map(([title, list]) => (
-          <div key={title} className="deck-group">
+        {grouped.map(([title, list, set]) => (
+          <div key={title} className={`deck-group ${title === 'Sideboard' ? 'sideboard' : ''}`}>
             <h3>
               {title} · {list.reduce((n, e) => n + e.count, 0)}
             </h3>
@@ -265,11 +290,11 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
                 <div key={e.name} className="deck-row">
                   {c && <img src={imageUrl(c.image, 120)} alt="" loading="lazy" />}
                   <span className="deck-row-name">{e.name}</span>
-                  <button className="step-btn" onClick={() => setCount(e.name, e.count - 1)} aria-label={`Tirar uma cópia de ${e.name}`}>
+                  <button className="step-btn" onClick={() => set(e.name, e.count - 1)} aria-label={`Tirar uma cópia de ${e.name}${title === 'Sideboard' ? ' do sideboard' : ''}`}>
                     −
                   </button>
                   <b className="deck-row-count">{e.count}</b>
-                  <button className="step-btn" onClick={() => setCount(e.name, e.count + 1)} aria-label={`Adicionar uma cópia de ${e.name}`}>
+                  <button className="step-btn" onClick={() => set(e.name, e.count + 1)} aria-label={`Adicionar uma cópia de ${e.name}${title === 'Sideboard' ? ' ao sideboard' : ''}`}>
                     +
                   </button>
                 </div>
@@ -338,8 +363,10 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; dispatch: (a: Ap
       )}
       {sheet === 'paste' && (
         <Sheet title="Colar lista" onClose={() => setSheet(null)}>
-          <p className="hint">Uma carta por linha, como "3 Jinx, Rebel". Lenda e battlefields também são reconhecidos. A lista substitui as cartas atuais.</p>
-          <textarea className="paste-box" rows={10} value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder={'Legend:\n1 Loose Cannon\nDeck:\n3 Jinx, Rebel\n…'} />
+          <p className="hint">
+            Cole a lista exportada (Piltover Archive e outros sites) ou escreva uma carta por linha, como "3 Jinx, Rebel". Lenda, battlefields, runas e sideboard são reconhecidos pelas seções da lista, e ela substitui as cartas atuais.
+          </p>
+          <textarea className="paste-box" rows={10} value={pasteText} onChange={(e) => setPasteText(e.target.value)} placeholder={'Legend:\n1 Jinx, Loose Cannon\nMainDeck:\n3 Jinx, Rebel\n…\nSideboard:\n2 …'} />
           {pasteResult && <p className="hint">{pasteResult}</p>}
           <button className="primary" onClick={importList} disabled={!pasteText.trim()}>
             Importar

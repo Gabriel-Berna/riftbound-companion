@@ -21,7 +21,8 @@ type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings' | 'deck
 export function App() {
   const [state, dispatch] = useAppStore()
   const [view, setView] = useState<View>('home')
-  const [editingDeck, setEditingDeck] = useState<Deck | null>(null)
+  // `paste`: deck novo que já abre na colagem da lista.
+  const [editingDeck, setEditingDeck] = useState<{ deck: Deck; paste?: boolean } | null>(null)
   const { match, records } = state
   const home = () => setView('home')
   const matchDispatch = useCallback((action: MatchAction) => dispatch({ type: 'match', action }), [dispatch])
@@ -58,9 +59,10 @@ export function App() {
   if (editingDeck)
     return (
       <DeckEditor
-        key={editingDeck.id}
-        deck={editingDeck}
-        saved={state.decks.some((d) => d.id === editingDeck.id)}
+        key={editingDeck.deck.id}
+        deck={editingDeck.deck}
+        startWithPaste={editingDeck.paste}
+        saved={state.decks.some((d) => d.id === editingDeck.deck.id)}
         dispatch={dispatch}
         onClose={() => setEditingDeck(null)}
       />
@@ -70,7 +72,7 @@ export function App() {
     case 'rules':
       return <RulesScreen onClose={home} />
     case 'decks':
-      return <DecksScreen decks={state.decks} onOpen={setEditingDeck} onBack={home} />
+      return <DecksScreen decks={state.decks} onOpen={(deck, paste) => setEditingDeck({ deck, paste })} onBack={home} />
     case 'new': {
       // Ao terminar a partida, o app volta para o início.
       const startMatch: typeof dispatch = (a) => {
