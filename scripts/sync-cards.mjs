@@ -1,8 +1,10 @@
 // Extrai battlefields e lendas da galeria oficial (playriftbound.com) para src/data/*.json.
+// Artes promocionais (Organized Play/Nexus Night, promos, juízes), que a galeria não tem, vêm da API pública do Riftcodex.
 // Uso: npm run sync-cards   (rodar de novo a cada set novo)
 import { access, mkdir, writeFile } from 'node:fs/promises'
 
 const GALLERY_URL = 'https://playriftbound.com/en-us/card-gallery/'
+const RIFTCODEX_API = 'https://api.riftcodex.com'
 const DATA_DIR = new URL('../src/data/', import.meta.url)
 
 const html = await (await fetch(GALLERY_URL)).text()
@@ -88,7 +90,7 @@ const legends = firstPrintings('legend')
   .sort((a, b) => a.champion.localeCompare(b.champion) || a.name.localeCompare(b.name))
 
 const TYPES = ['unit', 'spell', 'gear', 'legend', 'battlefield', 'rune']
-const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'showcase']
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'showcase', 'promo']
 
 /** Biblioteca completa: uma entrada por nome, com as artes alternativas agrupadas. */
 const byName = new Map()
@@ -127,6 +129,8 @@ for (const c of [...cards].sort((a, b) => Number(isShowcase(a)) - Number(isShowc
     variants: [variant],
   })
 }
+await addPromoArts()
+
 const library = [...byName.values()]
   .map((c) => ({ ...c, variants: c.variants.length > 1 ? c.variants : [] }))
   .sort((a, b) => a.name.localeCompare(b.name))
@@ -160,6 +164,46 @@ for (const url of legends.flatMap((l) => l.arts)) {
   downloaded += 1
 }
 console.log(`${downloaded} artes de lenda baixadas para public/art/legends/`)
+
+/**
+ * Junta as artes promocionais do Riftcodex às cartas da galeria, pelo nome.
+ * Muitas promos ainda apontam para a arte normal: só entram imagens que a carta não tem.
+ * Se a API falhar, a sincronização segue só com a galeria.
+ */
+async function addPromoArts() {
+  try {
+    const get = async (path) => {
+      const res = await fetch(`${RIFTCODEX_API}${path}`, { signal: AbortSignal.timeout(60_000) })
+      if (!res.ok) throw new Error(`${path}: ${res.status}`)
+      return res.json()
+    }
+    const sets = (await get('/sets')).items.filter((s) => /promotional/i.test(s.name))
+    const promos = []
+    for (const set of sets)
+      for (let page = 1; ; page++) {
+        const { items } = await get(`/cards?set_id=${set.set_id}&size=100&page=${page}`)
+        promos.push(...items)
+        if (items.length < 100) break
+      }
+    let added = 0
+    for (const p of promos) {
+      // "Ahri - Nine-Tailed Fox (Metal)": lendas usam só o título; unidades, "Campeão, Título".
+      const name = p.name.replace(/\s*\([^)]*\)$/, '')
+      const type = p.classification.type.toLowerCase()
+      const [champion, title] = name.split(' - ')
+      const key = !title ? name : type === 'legend' ? title : `${champion}, ${title}`
+      const card = [...byName.values()].find((c) => c.name === key && c.type === type)
+      const image = p.media.image_url.split('?')[0]
+      if (!card || card.image === image || card.variants.some((v) => v.image === image)) continue
+      card.variants.push({ code: p.riftbound_id.toUpperCase(), image, rarity: 'promo' })
+      if (type === 'legend') legends.find((l) => l.name === key)?.arts.push(image)
+      added += 1
+    }
+    console.log(`${added} artes promocionais adicionadas (Riftcodex, ${promos.length} promos)`)
+  } catch (e) {
+    console.warn(`Artes promocionais ignoradas: ${e.message}`)
+  }
+}
 
 /** Nome do arquivo local de uma arte: o identificador da imagem na CDN. */
 function localArtName(url) {

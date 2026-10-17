@@ -34,6 +34,7 @@ const RARITY_LABELS: Record<string, string> = {
   rare: 'Rara',
   epic: 'Épica',
   showcase: 'Showcase',
+  promo: 'Promo',
 }
 
 const PAGE = 60
