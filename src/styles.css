@@ -937,7 +937,8 @@ h3 {
 .sheet {
   width: 100%;
   max-width: 520px;
-  max-height: 88dvh;
+  /* Relativo ao fundo, que acompanha a área acima do teclado. */
+  max-height: 88%;
   background: linear-gradient(180deg, var(--surface-2), var(--bg-1));
   border: 1px solid var(--line);
   border-bottom: none;

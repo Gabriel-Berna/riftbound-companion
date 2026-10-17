@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { cardImage, findBattlefield, findLegend, imageUrl, legendImage, searchBattlefields, searchLegends, type LegendCard } from '../data/cards'
 import type { Domain } from '../engine/types'
-import { Sheet } from './common'
+import { autoFocusSearch, Sheet } from './common'
 import { DOMAIN_COLORS, POWER_LABELS } from './text'
 
 /** Fundo com a arte de uma carta do banco de dados, se houver. */
@@ -103,10 +103,18 @@ function CardPicker(props: {
       <input
         className="search"
         type="search"
-        autoFocus
+        autoFocus={autoFocusSearch}
+        enterKeyHint="search"
         placeholder={props.placeholder}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return
+          // Enter escolhe o único resultado; com vários, só fecha o teclado para ver a lista.
+          if (results.length === 1) props.onPick(results[0].value)
+          else if (!results.length && props.allowCustom && typed) props.onPick(typed)
+          else e.currentTarget.blur()
+        }}
         aria-label={props.placeholder}
       />
       <div className="picker-list">

@@ -4,7 +4,7 @@ import { EMPTY_FILTER, filterLibrary, loadLibrary, type LibraryCard } from '../d
 import { exportDecklist, parseDecklist, validateDeck, type Deck, type DeckEntry } from '../engine/deck'
 import { newId, type AppAction } from '../store'
 import { ArtPicker, BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker, LegendTile } from './cards'
-import { Brand, Sheet } from './common'
+import { autoFocusSearch, Brand, Sheet } from './common'
 import { CardText } from './LibraryScreen'
 
 const GROUPS: [string, (c: LibraryCard | undefined) => boolean][] = [
@@ -107,7 +107,17 @@ function AddCardSheet(props: {
   const countOf = (name: string) => props.deck.cards.find((e) => e.name === name)?.count ?? 0
   return (
     <Sheet title="Adicionar carta" onClose={props.onClose}>
-      <input className="search" type="search" autoFocus placeholder="Buscar por nome, texto ou tag…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Buscar carta" />
+      <input
+        className="search"
+        type="search"
+        autoFocus={autoFocusSearch}
+        enterKeyHint="search"
+        placeholder="Buscar por nome, texto ou tag…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        aria-label="Buscar carta"
+      />
       {legend && <p className="hint">Mostrando só cartas dos domínios de {legend.champion}.</p>}
       <div className="add-list">
         {results.map((c) => (

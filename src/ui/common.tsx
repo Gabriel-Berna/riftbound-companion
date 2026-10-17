@@ -1,9 +1,31 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+
+/** Área visível acima do teclado do celular (o layout não encolhe quando o teclado abre). */
+function useVisibleArea(): CSSProperties | undefined {
+  const [area, setArea] = useState<CSSProperties>()
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setArea({ top: vv.offsetTop, height: vv.height, bottom: 'auto' })
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+  return area
+}
+
+/** Teclado só abre sozinho onde há teclado físico; no celular, ele cobriria a lista. */
+export const autoFocusSearch = typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
 
 /** Painel modal que sobe da borda inferior. `flipped` gira para quem está do outro lado da mesa. */
 export function Sheet(props: { title: string; onClose: () => void; flipped?: boolean; children: ReactNode }) {
+  const area = useVisibleArea()
   return (
-    <div className="sheet-backdrop" onClick={props.onClose}>
+    <div className="sheet-backdrop" style={area} onClick={props.onClose}>
       <div
         className={`sheet ${props.flipped ? 'flipped' : ''}`}
         role="dialog"
