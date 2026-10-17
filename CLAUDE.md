@@ -3,6 +3,7 @@
 PWA (React + TypeScript + Vite) de apoio a partidas do TCG Riftbound. Interface em português (pt-BR).
 
 - `src/engine/`: regras puras (`game.ts`, `match.ts`), sem React. Toda regra nova entra aqui, com teste em `*.test.ts` citando a regra oficial (ex.: CR 473.1.b).
+- `src/data/library.json` (todas as cartas, carregada sob demanda por `loadLibrary()` em `src/data/library.ts`) e glossário em português em `src/data/keywords.ts`. Unidades campeãs têm nome completo "Campeão, Título" (o título vem do `subtitle` da galeria).
 - `src/data/battlefields.json` e `src/data/legends.json`: gerados por `npm run sync-cards` (galeria oficial em playriftbound.com); não editar à mão. Acesso pelo módulo `src/data/cards.ts`. O campeão de cada lenda vem das tags da carta. Artes vêm da CDN da Riot (`cmsassets.rgpub.io`, com `?w=…&fm=webp`) e ficam em cache no service worker.
 - Visual: tokens de cor e fontes (Cinzel para títulos e números, Inter para texto) em `src/styles.css`. Paleta do Riftbound: azul-petróleo, laranja #EF7D00, dourado hextech.
 - Efeitos: `src/ui/spectacle.tsx` (VS, vitória, moeda), `src/ui/effects.ts` (sons via Web Audio, vibração, Wake Lock), `src/ui/charts.tsx` (gráficos em SVG). Animações respeitam `prefers-reduced-motion`. Artes de lenda são a carta inteira: ampliar e ancorar no topo para mostrar só a ilustração.

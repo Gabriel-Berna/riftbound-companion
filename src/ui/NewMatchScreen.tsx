@@ -45,6 +45,7 @@ export function NewMatchScreen(props: {
   /** Última lenda usada por cada oponente já enfrentado. */
   opponents: Map<string, string | undefined>
   onStats: () => void
+  onLibrary: () => void
 }) {
   const { dispatch } = props
   const [format, setFormat] = useState<MatchFormat>('match')
@@ -75,9 +76,14 @@ export function NewMatchScreen(props: {
   return (
     <main className="screen setup">
       <Brand subtitle="Placar e guia de partida · 1v1" />
-      <button className="secondary stats-btn" onClick={props.onStats}>
-        📊 Estatísticas
-      </button>
+      <div className="row-buttons home-nav">
+        <button className="secondary" onClick={props.onStats}>
+          📊 Estatísticas
+        </button>
+        <button className="secondary" onClick={props.onLibrary}>
+          📚 Cartas
+        </button>
+      </div>
 
       <section className="card">
         <h2>Formato</h2>

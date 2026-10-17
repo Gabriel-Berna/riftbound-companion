@@ -36,6 +36,8 @@ const isType = (c, type) => c.cardType?.type?.some((t) => t.id === type)
 const isToken = (c) => /-T\d+/.test(c.publicCode)
 // Artes alternativas repetem o nome; fica a primeira impressão, de raridade normal.
 const isShowcase = (c) => c.rarity?.value?.id === 'showcase'
+/** Nome completo: unidades campeãs têm o título no subtítulo (ex.: "Jinx" + "Rebel" → "Jinx, Rebel"). */
+const fullName = (c) => (c.subtitle ? `${c.name}, ${c.subtitle}` : c.name)
 
 function firstPrintings(type) {
   const seen = new Set()
@@ -59,8 +61,8 @@ const battlefields = firstPrintings('battlefield')
   .map(base)
   .sort((a, b) => a.name.localeCompare(b.name))
 
-// Unidades campeãs se chamam "Campeão, Título" (ex.: "Jinx, Rebel"); daí vêm os nomes de campeões.
-const championNames = new Set(cards.filter((c) => isType(c, 'unit') && c.name.includes(',')).map((c) => c.name.split(',')[0].trim()))
+// Nomes de campeões: o nome das unidades campeãs (ex.: "Jinx" em "Jinx, Rebel").
+const championNames = new Set(cards.filter((c) => c.cardType?.superType?.some((t) => t.id === 'champion')).map((c) => c.name))
 
 /** Entre as tags da lenda (ex.: Dog, Shurima, Nasus), a do campeão é a que nomeia uma unidade campeã. */
 const championOf = (c) => {
@@ -76,9 +78,55 @@ const legends = firstPrintings('legend')
   }))
   .sort((a, b) => a.champion.localeCompare(b.champion) || a.name.localeCompare(b.name))
 
+const TYPES = ['unit', 'spell', 'gear', 'legend', 'battlefield', 'rune']
+const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'showcase']
+
+/** Biblioteca completa: uma entrada por nome, com as artes alternativas agrupadas. */
+const byName = new Map()
+for (const c of [...cards].sort((a, b) => Number(isShowcase(a)) - Number(isShowcase(b)) || a.publicCode.localeCompare(b.publicCode))) {
+  const variant = { code: c.publicCode, image: c.cardImage.url.split('?')[0], rarity: c.rarity?.value?.id ?? null }
+  const key = fullName(c)
+  const existing = byName.get(key)
+  if (existing) {
+    existing.variants.push(variant)
+    continue
+  }
+  const type = c.cardType?.type?.map((t) => t.id).find((t) => TYPES.includes(t)) ?? 'other'
+  byName.set(key, {
+    id: c.id,
+    // Em unidades o subtítulo é o título do campeão; em feitiços e lendas, uma observação (ex.: campeão, "Starter").
+    name: type === 'unit' ? key : c.name,
+    subtitle: type === 'unit' ? null : (c.subtitle ?? null),
+    type,
+    super: c.cardType?.superType?.[0]?.id ?? null,
+    domains: (c.domain?.values ?? []).map((d) => d.id).filter((d) => d !== 'colorless'),
+    energy: c.energy?.value?.id ?? null,
+    power: c.power?.value?.id ?? null,
+    might: c.might?.value?.id ?? null,
+    mightBonus: c.mightBonus?.value?.id ?? null,
+    tags: c.tags?.tags ?? [],
+    set: c.set.value.id,
+    setName: c.set.value.label,
+    code: c.publicCode,
+    rarity: c.rarity?.value?.id ?? null,
+    text: plainText(c.text?.richText?.body),
+    // Equipamentos têm um texto extra que só vale enquanto estão anexados.
+    effect: plainText(c.effect?.richText?.body) || null,
+    image: variant.image,
+    orientation: c.orientation,
+    artist: c.illustrator?.values?.map((v) => v.label).join(', ') || null,
+    variants: [variant],
+  })
+}
+const library = [...byName.values()]
+  .map((c) => ({ ...c, variants: c.variants.length > 1 ? c.variants : [] }))
+  .sort((a, b) => a.name.localeCompare(b.name))
+for (const c of library) c.variants.sort((a, b) => RARITY_ORDER.indexOf(a.rarity) - RARITY_ORDER.indexOf(b.rarity))
+
 for (const [file, list] of [
   ['battlefields.json', battlefields],
   ['legends.json', legends],
+  ['library.json', library],
 ]) {
   await writeFile(new URL(file, DATA_DIR), JSON.stringify(list, null, 2) + '\n')
   console.log(`${list.length} cartas salvas em src/data/${file}`)

@@ -3,6 +3,7 @@ import { isMatchOver } from './engine/match'
 import { useAppStore } from './store'
 import { GameScreen } from './ui/GameScreen'
 import { GameSetupScreen } from './ui/GameSetupScreen'
+import { LibraryScreen } from './ui/LibraryScreen'
 import { ManualRecordScreen } from './ui/ManualRecordScreen'
 import { MatchOverScreen } from './ui/MatchOverScreen'
 import { NewMatchScreen } from './ui/NewMatchScreen'
@@ -10,7 +11,7 @@ import { StatsScreen } from './ui/StatsScreen'
 
 export function App() {
   const [state, dispatch] = useAppStore()
-  const [view, setView] = useState<'home' | 'stats' | 'manual'>('home')
+  const [view, setView] = useState<'home' | 'stats' | 'manual' | 'library'>('home')
   const { match, records } = state
 
   const lastMe = records[0]?.players[0]
@@ -32,6 +33,7 @@ export function App() {
   // A key recria a tela a cada jogo, zerando as escolhas do jogo anterior.
   if (match) return <GameSetupScreen key={match.games.length} match={match} dispatch={dispatch} />
 
+  if (view === 'library') return <LibraryScreen onClose={() => setView('home')} />
   if (view === 'stats')
     return <StatsScreen records={records} dispatch={dispatch} onBack={() => setView('home')} onAddManual={() => setView('manual')} />
   if (view === 'manual')
@@ -44,5 +46,5 @@ export function App() {
         onDone={() => setView('stats')}
       />
     )
-  return <NewMatchScreen key={records.length} dispatch={dispatch} lastMe={lastMe} opponents={opponents} onStats={() => setView('stats')} />
+  return <NewMatchScreen key={records.length} dispatch={dispatch} lastMe={lastMe} opponents={opponents} onStats={() => setView('stats')} onLibrary={() => setView('library')} />
 }

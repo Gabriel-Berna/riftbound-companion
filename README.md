@@ -10,6 +10,7 @@ App de celular (PWA) de apoio para partidas do TCG físico **Riftbound** (Riot G
 - **Burn Out**, pontos por efeito de carta, concessão e empate.
 - **Histórico** do jogo e **desfazer**.
 - **Melhor de 3** e **jogo único**: battlefields usados saem da partida, quem perdeu escolhe quem começa.
+- **Biblioteca de cartas**: as 1.103 cartas da galeria oficial, com busca por nome, texto ou tag, filtros por tipo, domínio e set, detalhes com custos, Might, artes alternativas e palavras-chave explicadas em português. Abre também durante a partida.
 - **Visual de jogo**: tela de VS com as artes das lendas antes de cada jogo, tela de vitória com a arte da lenda vencedora e partículas, moeda animada no sorteio, animações ao pontuar e ao conquistar, brilho do painel nas cores dos domínios da lenda.
 - **Preferências** (menu da partida): sons sintetizados (desligados por padrão), vibração ao pontuar e tela sempre ligada durante a partida.
 - **Estatísticas**: cada partida encerrada é salva no aparelho (você é sempre o Jogador 1). % de vitória por partida, por jogo, começando ou em segundo, por lenda sua, por lenda do oponente, por oponente e por battlefield, com filtro pela sua lenda, gráfico da evolução da % de vitórias e mapa de confrontos (suas lendas × lendas dos oponentes). Registro manual de partidas jogadas sem o app e backup em arquivo (exportar/importar).
@@ -24,7 +25,7 @@ npm install
 npm run dev      # servidor local
 npm test         # testes das regras (Vitest)
 npm run build    # verificação de tipos + build de produção
-npm run sync-cards  # atualiza battlefields e lendas (src/data/) a partir da galeria oficial
+npm run sync-cards  # atualiza battlefields, lendas e a biblioteca (src/data/) a partir da galeria oficial
 ```
 
 A lógica do jogo fica em `src/engine/` (sem dependência de interface, com testes) e a interface em `src/ui/`.

@@ -45,6 +45,10 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    // A biblioteca de cartas (src/data/library.json) é um bloco grande, mas carregado só sob demanda.
+    chunkSizeWarningLimit: 900,
+  },
   test: {
     include: ['src/**/*.test.ts'],
   },

@@ -7,6 +7,7 @@ import { findBattlefield, findLegend } from '../data/cards'
 import { battlefieldArt, DomainIcons, legendArt } from './cards'
 import { ScoreGems, Sheet, Stepper } from './common'
 import { useGameFeedback, useWakeLock } from './effects'
+import { LibraryScreen } from './LibraryScreen'
 import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
 import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
@@ -15,6 +16,7 @@ type Panel =
   | { kind: 'pool'; player: PlayerIndex }
   | { kind: 'log' }
   | { kind: 'menu' }
+  | { kind: 'library' }
   | null
 
 interface Props {
@@ -45,6 +47,9 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
           </button>
           <button className="tool" onClick={() => setPanel({ kind: 'log' })}>
             Histórico
+          </button>
+          <button className="tool" onClick={() => setPanel({ kind: 'library' })}>
+            Cartas
           </button>
           <button className="tool" onClick={() => setPanel({ kind: 'menu' })} aria-label="Menu">
             ⋯
@@ -82,6 +87,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
       {panel?.kind === 'menu' && (
         <MenuSheet state={state} game={game} act={act} dispatch={dispatch} onClose={() => setPanel(null)} />
       )}
+      {panel?.kind === 'library' && <LibraryScreen overlay onClose={() => setPanel(null)} />}
       {game.result && <GameOver match={match} game={game} dispatch={dispatch} />}
       {intro && <VersusIntro match={match} game={game} onDone={closeIntro} />}
     </main>
