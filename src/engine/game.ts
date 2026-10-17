@@ -1,6 +1,5 @@
 import {
   DOMAINS,
-  PHASES,
   type Battlefield,
   type GameResult,
   type GameState,
@@ -14,7 +13,8 @@ import {
 export const VICTORY_SCORE_1V1 = 8
 
 export type GameAction =
-  | { type: 'nextPhase' }
+  /** Encerra o turno atual e começa o do oponente. */
+  | { type: 'passTurn' }
   | { type: 'conquer'; player: PlayerIndex; battlefieldId: string }
   | { type: 'hold'; player: PlayerIndex; battlefieldId: string }
   /** Corrige o controle sem pontuar (ex.: o jogador ficou sem unidades no battlefield). */
@@ -59,7 +59,6 @@ export function createGame(opts: NewGameOptions): GameState {
     firstPlayer: opts.firstPlayer,
     turn: 1,
     active: opts.firstPlayer,
-    phase: 'awaken',
     turnsTaken: opts.firstPlayer === 0 ? [1, 0] : [0, 1],
     scoredThisTurn: [[], []],
     log: [{ kind: 'turn-start', turn: 1, player: opts.firstPlayer }],
@@ -71,13 +70,6 @@ export function createGame(opts: NewGameOptions): GameState {
 export function runesToChannel(s: GameState): number {
   const isSecondPlayersFirstTurn = s.active !== s.firstPlayer && s.turnsTaken[s.active] === 1
   return isSecondPlayersFirstTurn ? 3 : 2
-}
-
-/** Battlefields que o jogador da vez vai segurar (Hold) no Scoring Step. */
-export function pendingHolds(s: GameState): Battlefield[] {
-  return s.battlefields.filter(
-    (bf) => bf.controller === s.active && !s.scoredThisTurn[s.active].includes(bf.id),
-  )
 }
 
 /** Se um Conquer agora daria o ponto ao jogador, ou se seria barrado pela regra do Ponto Final. */
@@ -98,8 +90,8 @@ export function gameReducer(s: GameState, a: GameAction): GameState {
 
 function apply(s: GameState, a: GameAction): void {
   switch (a.type) {
-    case 'nextPhase':
-      return nextPhase(s)
+    case 'passTurn':
+      return passTurn(s)
 
     case 'conquer': {
       const bf = findBattlefield(s, a.battlefieldId)
@@ -179,28 +171,19 @@ function apply(s: GameState, a: GameAction): void {
   }
 }
 
-function nextPhase(s: GameState): void {
-  const i = PHASES.indexOf(s.phase)
-  if (s.phase === 'beginning') {
-    // Scoring Step: o jogador da vez segura todos os battlefields que controla (CR 315.2.b).
-    for (const bf of pendingHolds(s)) holdBattlefield(s, s.active, bf)
-    checkVictory(s)
-    if (s.result) return
+function passTurn(s: GameState): void {
+  // Ending Phase: o rune pool esvazia (CR 317.2.d).
+  s.players.forEach(clearPool)
+  s.active = other(s.active)
+  s.turn += 1
+  s.turnsTaken[s.active] += 1
+  s.scoredThisTurn = [[], []]
+  log(s, { kind: 'turn-start', turn: s.turn, player: s.active })
+  // Scoring Step da Beginning Phase: o novo jogador segura os battlefields que controla (CR 315.2.b).
+  for (const bf of s.battlefields) {
+    if (bf.controller === s.active) holdBattlefield(s, s.active, bf)
   }
-  if (s.phase === 'ending') {
-    // Expiration Step: o rune pool esvazia (CR 317.2.d). Depois, o próximo jogador assume.
-    s.players.forEach(clearPool)
-    s.active = other(s.active)
-    s.turn += 1
-    s.turnsTaken[s.active] += 1
-    s.phase = 'awaken'
-    s.scoredThisTurn = [[], []]
-    log(s, { kind: 'turn-start', turn: s.turn, player: s.active })
-    return
-  }
-  s.phase = PHASES[i + 1]
-  // O rune pool de todos esvazia no início da Main Phase (CR 316.3).
-  if (s.phase === 'main') s.players.forEach(clearPool)
+  checkVictory(s)
 }
 
 function holdBattlefield(s: GameState, player: PlayerIndex, bf: Battlefield): void {

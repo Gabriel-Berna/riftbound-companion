@@ -6,10 +6,6 @@ export type Domain = (typeof DOMAINS)[number]
 export type PowerKind = Domain | 'universal'
 export type PowerPool = Record<PowerKind, number>
 
-/** Fases do turno (CR 314–317). */
-export const PHASES = ['awaken', 'beginning', 'channel', 'draw', 'main', 'ending'] as const
-export type Phase = (typeof PHASES)[number]
-
 export interface Battlefield {
   id: string
   name: string
@@ -52,7 +48,6 @@ export interface GameState {
   /** Contador global de turnos, começando em 1. */
   turn: number
   active: PlayerIndex
-  phase: Phase
   /** Quantos turnos cada jogador já começou (para o ajuste do primeiro turno). */
   turnsTaken: [number, number]
   /** IDs dos battlefields que cada jogador pontuou neste turno (CR 472). */

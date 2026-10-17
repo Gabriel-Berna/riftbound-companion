@@ -553,73 +553,54 @@ h3 {
   min-height: 1em;
 }
 
-.turnbar {
+.turnstrip {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.6rem 0.75rem;
   display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.turnstrip.flipped {
+  transform: rotate(180deg);
+}
+
+.turnstrip.p0 {
+  border-left: 4px solid var(--p0);
+}
+
+.turnstrip.p1 {
+  border-left: 4px solid var(--p1);
+}
+
+.turn-info {
+  flex: 1;
+  display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.15rem;
+  min-width: 0;
 }
 
 .turn-head {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+}
+
+.turn-note {
+  font-size: 0.78rem;
   color: var(--muted);
 }
 
-.phases {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 3px;
-}
-
-.phases li {
-  text-align: center;
-  font-size: 0.66rem;
-  padding: 0.3rem 0;
-  border-radius: 6px;
-  background: var(--surface-2);
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.phases li.past {
-  opacity: 0.5;
-}
-
-.turnbar.p0 .phases li.current {
-  background: var(--p0);
-  color: #06121f;
-  font-weight: 700;
-}
-
-.turnbar.p1 .phases li.current {
-  background: var(--p1);
-  color: #1f0806;
-  font-weight: 700;
-}
-
-.phase-help {
-  font-size: 0.88rem;
-  min-height: 3.6em;
-}
-
-.phase-help p {
-  margin: 0 0 0.25rem;
-}
-
-.phase-help .emph {
+.turn-note.emph {
   color: var(--gold-strong);
   font-weight: 600;
 }
 
 .next {
-  padding: 0.7rem;
+  width: auto;
+  flex-shrink: 0;
+  padding: 0.8rem 1rem;
 }
 
 /* ---------- Painéis modais ---------- */
@@ -901,24 +882,5 @@ h3 {
     padding: 0.35rem;
   }
 
-  .phase-help {
-    font-size: 0.82rem;
-    min-height: 0;
-  }
-
-  .phase-help .hint {
-    display: none;
-  }
-
-  .next {
-    padding: 0.6rem;
-  }
 }
 
-/* Telas estreitas: rótulos das fases menores. */
-@media (max-width: 380px) {
-  .phases li {
-    font-size: 0.6rem;
-    letter-spacing: -0.02em;
-  }
-}

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { conquerOutcome, pendingHolds, runesToChannel, type GameAction } from '../engine/game'
+import { conquerOutcome, runesToChannel, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
-import { DOMAINS, PHASES, type Battlefield, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
+import { DOMAINS, type Battlefield, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
 import type { AppAction, AppState } from '../store'
 import { Sheet, Stepper } from './common'
-import { DOMAIN_COLORS, PHASE_LABELS, POWER_LABELS, describeLog } from './text'
+import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
 type Panel =
   | { kind: 'battlefield'; id: string }
@@ -46,7 +46,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
             <BattlefieldCard key={bf.id} game={game} bf={bf} onClick={() => setPanel({ kind: 'battlefield', id: bf.id })} />
           ))}
         </div>
-        <TurnBar game={game} act={act} />
+        <TurnStrip game={game} flipped={flipped(game.active)} act={act} />
       </section>
 
       <PlayerPanel game={game} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
@@ -192,7 +192,7 @@ function PoolSheet(props: { game: GameState; player: PlayerIndex; flipped: boole
   const kinds: PowerKind[] = [...DOMAINS, 'universal']
   return (
     <Sheet title={`Rune pool de ${p.name}`} flipped={props.flipped} onClose={props.onClose}>
-      <p className="hint">Energy e Power acumulados. O pool esvazia sozinho no início da fase Principal e no fim de cada turno.</p>
+      <p className="hint">Energy e Power acumulados. O pool esvazia sozinho quando alguém passa a vez.</p>
       <div className="pool-grid">
         <Stepper label="Energy" value={p.energy} onChange={(delta) => act({ type: 'adjustEnergy', player, delta })} />
         {kinds.map((kind) => (
@@ -212,88 +212,49 @@ function PoolSheet(props: { game: GameState; player: PlayerIndex; flipped: boole
   )
 }
 
-function TurnBar({ game, act }: { game: GameState; act: (a: GameAction) => void }) {
-  const holds = game.phase === 'beginning' ? pendingHolds(game) : []
-  const nextLabel = game.phase === 'ending' ? 'Passar a vez →' : holds.length > 0 ? `Pontuar ${holds.length} e avançar →` : 'Próxima fase →'
-
+/** Faixa do turno, virada para o jogador da vez. */
+function TurnStrip({ game, flipped, act }: { game: GameState; flipped: boolean; act: (a: GameAction) => void }) {
+  const extraRune = runesToChannel(game) > 2
   return (
-    <div className={`turnbar p${game.active}`}>
-      <div className="turn-head">
-        Turno {game.turn} · vez de <b className={`c${game.active}`}>{game.players[game.active].name}</b>
+    <div className={`turnstrip p${game.active} ${flipped ? 'flipped' : ''}`}>
+      <div className="turn-info">
+        <span className="turn-head">
+          Turno {game.turn} · vez de <b className={`c${game.active}`}>{game.players[game.active].name}</b>
+        </span>
+        <span className={extraRune ? 'turn-note emph' : 'turn-note'}>
+          {extraRune ? 'Primeiro turno: canalize 3 runas (1 extra).' : 'Toque num battlefield para registrar uma conquista.'}
+        </span>
       </div>
-      <ol className="phases">
-        {PHASES.map((ph) => (
-          <li key={ph} className={ph === game.phase ? 'current' : PHASES.indexOf(ph) < PHASES.indexOf(game.phase) ? 'past' : ''}>
-            {PHASE_LABELS[ph]}
-          </li>
-        ))}
-      </ol>
-      <div className="phase-help">
-        <PhaseHelp game={game} holds={holds} />
-      </div>
-      <button className="primary next" onClick={() => act({ type: 'nextPhase' })}>
-        {nextLabel}
+      <button className="primary next" onClick={() => act({ type: 'passTurn' })}>
+        Passar a vez →
       </button>
     </div>
   )
 }
 
-function PhaseHelp({ game, holds }: { game: GameState; holds: Battlefield[] }) {
-  switch (game.phase) {
-    case 'awaken':
-      return <p>Prepare (ready) tudo que você controla: runas, unidades, gear e legend.</p>
-    case 'beginning':
-      return (
-        <>
-          <p>Efeitos de início de turno. Unidades com <b>Temporary</b> morrem agora, antes de pontuar.</p>
-          <p className="emph">
-            {holds.length > 0
-              ? `Você segura (Hold): ${holds.map((b) => b.name).join(', ')}. +${holds.length} ao avançar.`
-              : 'Você não controla nenhum battlefield: nada a pontuar.'}
-          </p>
-          <p className="hint">Confira o controle dos battlefields antes de avançar.</p>
-        </>
-      )
-    case 'channel': {
-      const n = runesToChannel(game)
-      return (
-        <p>
-          Canalize <b>{n} runas</b> do Rune Deck.{n > 2 && ' (+1 extra: primeiro turno de quem joga em segundo.)'}
-        </p>
-      )
-    }
-    case 'draw':
-      return (
-        <p>
-          Compre 1 carta. Deck vazio? Use <b>Burn Out</b>: recicle o descarte no deck, o oponente ganha 1 ponto, e compre.
-        </p>
-      )
-    case 'main':
-      return <p>O rune pool foi esvaziado. Jogue cartas, mova unidades e lute. Toque num battlefield para registrar uma conquista.</p>
-    case 'ending':
-      return <p>Efeitos de fim de turno. Depois, todas as unidades são curadas, efeitos “neste turno” acabam e o rune pool esvazia.</p>
-  }
-}
-
 /** Mostra por alguns segundos o que acabou de acontecer com o placar. */
 function Toast({ game }: { game: GameState }) {
-  const [message, setMessage] = useState<{ text: string; warn: boolean } | null>(null)
+  const [message, setMessage] = useState<{ lines: string[]; warn: boolean } | null>(null)
   const seen = useRef(game.log.length)
 
   useEffect(() => {
     const fresh = game.log.slice(seen.current)
     seen.current = game.log.length
-    const last = fresh.filter((e) => e.kind !== 'turn-start' && e.kind !== 'result').at(-1)
-    if (!last) return
-    setMessage({ text: describeLog(game, last), warn: last.kind === 'final-point-blocked' || last.kind === 'already-scored' })
-    const t = setTimeout(() => setMessage(null), last.kind === 'final-point-blocked' ? 6000 : 3000)
+    const relevant = fresh.filter((e) => e.kind !== 'result')
+    // Uma passagem de turno sem pontos não precisa de aviso.
+    if (relevant.every((e) => e.kind === 'turn-start')) return
+    const warn = relevant.some((e) => e.kind === 'final-point-blocked' || e.kind === 'already-scored')
+    setMessage({ lines: relevant.map((e) => describeLog(game, e)), warn })
+    const t = setTimeout(() => setMessage(null), warn ? 6000 : 3000)
     return () => clearTimeout(t)
   }, [game])
 
   if (!message) return null
   return (
     <div className={`toast ${message.warn ? 'warn' : ''}`} role="status">
-      {message.text}
+      {message.lines.map((line, i) => (
+        <div key={i}>{line}</div>
+      ))}
     </div>
   )
 }

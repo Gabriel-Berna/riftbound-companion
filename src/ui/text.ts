@@ -1,13 +1,4 @@
-import type { Domain, GameState, LogEntry, Phase, PowerKind } from '../engine/types'
-
-export const PHASE_LABELS: Record<Phase, string> = {
-  awaken: 'Despertar',
-  beginning: 'Início',
-  channel: 'Canalizar',
-  draw: 'Comprar',
-  main: 'Principal',
-  ending: 'Fim',
-}
+import type { Domain, GameState, LogEntry, PowerKind } from '../engine/types'
 
 export const POWER_LABELS: Record<PowerKind, string> = {
   fury: 'Fury',
