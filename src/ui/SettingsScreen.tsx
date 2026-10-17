@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { findLegend } from '../data/cards'
 import type { MatchPlayer } from '../engine/match'
 import type { AppAction, AppState, Settings } from '../store'
-import { LegendPicker, LegendTile } from './cards'
+import { ArtPicker, LegendPicker, LegendTile } from './cards'
 import { Brand } from './common'
 
 const SETTING_LABELS: [keyof Settings, string, string][] = [
@@ -38,6 +38,7 @@ export function SettingsScreen(props: {
   const { state, dispatch, onBack } = props
   const profile: MatchPlayer = props.profile ?? { name: '', battlefields: ['', '', ''] }
   const [pickingLegend, setPickingLegend] = useState(false)
+  const [pickingArt, setPickingArt] = useState(false)
   const legend = findLegend(profile.legend)
   const save = (patch: Partial<MatchPlayer>) => dispatch({ type: 'setProfile', profile: { ...profile, ...patch } })
 
@@ -57,7 +58,14 @@ export function SettingsScreen(props: {
         <div className="field">
           <span>Lenda principal</span>
           {legend ? (
-            <LegendTile legend={legend} onClick={() => setPickingLegend(true)} />
+            <>
+              <LegendTile legend={legend} art={profile.legendArt} onClick={() => setPickingLegend(true)} />
+              {legend.arts.length > 1 && (
+                <button className="secondary" onClick={() => setPickingArt(true)}>
+                  🎨 Escolher arte ({legend.arts.length} disponíveis)
+                </button>
+              )}
+            </>
           ) : (
             <button className="bf-slot-empty" onClick={() => setPickingLegend(true)}>
               + Escolher lenda
@@ -91,10 +99,21 @@ export function SettingsScreen(props: {
         </p>
       </section>
 
+      {pickingArt && legend && (
+        <ArtPicker
+          legend={legend}
+          current={profile.legendArt}
+          onPick={(legendArt) => {
+            save({ legendArt })
+            setPickingArt(false)
+          }}
+          onClose={() => setPickingArt(false)}
+        />
+      )}
       {pickingLegend && (
         <LegendPicker
           onPick={(l) => {
-            save({ legend: l })
+            save({ legend: l, legendArt: undefined })
             setPickingLegend(false)
           }}
           onClose={() => setPickingLegend(false)}

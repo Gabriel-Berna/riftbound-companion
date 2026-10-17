@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { cardImage, findLegend, LEGENDS } from '../data/cards'
+import { cardImage, findLegend, legendImage, LEGENDS } from '../data/cards'
 import { gameWins, type MatchPlayer, type MatchState } from '../engine/match'
 import { computeStats, matchOutcome, winRate, type MatchRecord } from '../engine/stats'
 import { DomainIcons } from './cards'
@@ -30,7 +30,7 @@ export function HomeScreen(props: {
 
   return (
     <main className="screen home">
-      <section className="hero" style={{ backgroundImage: `url("${cardImage(hero, 900)}")` }}>
+      <section className="hero" style={{ backgroundImage: `url("${legendImage(hero, myLegend ? profile?.legendArt : undefined, 900)}")` }}>
         <div className="hero-top">
           <span className="hero-logo">
             Riftbound <small>Companion</small>

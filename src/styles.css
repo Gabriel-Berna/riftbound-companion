@@ -3023,3 +3023,78 @@ h3 {
   z-index: 3;
   box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.7);
 }
+
+/* ---------- Artes alternativas ---------- */
+
+.art-count {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(6, 16, 20, 0.85);
+  border: 1px solid var(--gold-soft);
+  color: var(--cream);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.variants-title {
+  margin-top: 0.2rem;
+}
+
+.variant {
+  width: 84px;
+}
+
+.art-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+
+.art-option {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+  opacity: 0.75;
+}
+
+.art-option img {
+  width: 100%;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  aspect-ratio: 744 / 1039;
+  background: var(--surface-3);
+}
+
+.art-option.on {
+  opacity: 1;
+}
+
+.art-option.on img {
+  border-color: var(--orange);
+  box-shadow: 0 0 16px -4px var(--orange-glow);
+}
+
+.art-option small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.art-btn {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gold-strong);
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid var(--gold-soft);
+  background: rgba(6, 16, 20, 0.6);
+}
+
+.variant img {
+  aspect-ratio: 744 / 1039;
+  object-fit: cover;
+  background: var(--surface-3);
+}

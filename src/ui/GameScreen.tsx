@@ -39,7 +39,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
 
   return (
     <main className="game">
-      <PlayerPanel game={game} legend={match.players[1].legend} player={1} flipped={flipped(1)} act={act} openPool={() => setPanel({ kind: 'pool', player: 1 })} />
+      <PlayerPanel game={game} legend={match.players[1].legend} legendArt={match.players[1].legendArt} player={1} flipped={flipped(1)} act={act} openPool={() => setPanel({ kind: 'pool', player: 1 })} />
 
       <section className="center">
         <div className="toolbar">
@@ -64,7 +64,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
         <TurnStrip game={game} flipped={flipped(game.active)} act={act} />
       </section>
 
-      <PlayerPanel game={game} legend={match.players[0].legend} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
+      <PlayerPanel game={game} legend={match.players[0].legend} legendArt={match.players[0].legendArt} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
 
       <Toast game={game} />
 
@@ -98,6 +98,7 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
 function PlayerPanel(props: {
   game: GameState
   legend: string | undefined
+  legendArt: string | undefined
   player: PlayerIndex
   flipped: boolean
   act: (a: GameAction) => void
@@ -117,7 +118,7 @@ function PlayerPanel(props: {
       style={legend ? ({ '--pc-a': accentA, '--pc-b': accentB } as CSSProperties) : undefined}
       aria-label={`Painel de ${p.name}`}
     >
-      {legend && <div className="panel-art" style={legendArt(legend.name, 640)} aria-hidden="true" />}
+      {legend && <div className="panel-art" style={legendArt(legend.name, 640, props.legendArt)} aria-hidden="true" />}
       <div className="panel-head">
         <span className="panel-id">
           <span className="panel-name">{p.name}</span>

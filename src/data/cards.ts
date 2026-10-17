@@ -18,6 +18,8 @@ export type BattlefieldCard = CardBase
 export interface LegendCard extends CardBase {
   champion: string
   domains: Domain[]
+  /** Todas as artes da lenda: a principal primeiro, depois as alternativas. */
+  arts: string[]
 }
 
 export const BATTLEFIELDS: BattlefieldCard[] = battlefieldData
@@ -30,8 +32,15 @@ const legendsByName = new Map(LEGENDS.map((l) => [l.name, l]))
 export const findBattlefield = (name: string): BattlefieldCard | undefined => battlefieldsByName.get(name)
 export const findLegend = (name: string | undefined): LegendCard | undefined => (name ? legendsByName.get(name) : undefined)
 
-/** Miniatura da arte via CDN da Riot (redimensionada e em WebP). */
-export const cardImage = (card: CardBase, width = 480): string => `${card.image}?w=${width}&fm=webp&q=75`
+/** Imagem da CDN da Riot redimensionada e em WebP. */
+export const imageUrl = (url: string, width = 480): string => `${url}?w=${width}&fm=webp&q=75`
+
+/** Miniatura da arte principal de uma carta. */
+export const cardImage = (card: CardBase, width = 480): string => imageUrl(card.image, width)
+
+/** Arte escolhida para a lenda, se for uma das artes dela; senão, a principal. */
+export const legendImage = (legend: LegendCard, art: string | undefined, width = 480): string =>
+  imageUrl(art && legend.arts.includes(art) ? art : legend.image, width)
 
 const normalize = (s: string) =>
   s

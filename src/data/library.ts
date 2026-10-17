@@ -40,9 +40,11 @@ export interface LibraryFilter {
   type: CardType | 'all'
   domains: Domain[]
   set: string | 'all'
+  /** Só cartas com artes alternativas. */
+  withArts: boolean
 }
 
-export const EMPTY_FILTER: LibraryFilter = { query: '', type: 'all', domains: [], set: 'all' }
+export const EMPTY_FILTER: LibraryFilter = { query: '', type: 'all', domains: [], set: 'all', withArts: false }
 
 let cache: Promise<LibraryCard[]> | null = null
 
@@ -64,6 +66,7 @@ export function filterLibrary(cards: LibraryCard[], f: LibraryFilter): LibraryCa
   for (const c of cards) {
     if (f.type !== 'all' && c.type !== f.type) continue
     if (f.set !== 'all' && c.set !== f.set) continue
+    if (f.withArts && c.variants.length === 0) continue
     // Domínios: a carta precisa ter todos os domínios marcados.
     if (f.domains.length && !f.domains.every((d) => c.domains.includes(d))) continue
     if (!q) {

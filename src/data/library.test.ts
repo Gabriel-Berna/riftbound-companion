@@ -25,6 +25,13 @@ describe('biblioteca de cartas', async () => {
     expect(origins.every((c) => c.set === 'OGN')).toBe(true)
   })
 
+  it('filtra cartas com artes alternativas, incluindo lendas e runas', () => {
+    const r = filterLibrary(cards, { ...EMPTY_FILTER, withArts: true })
+    expect(r.length).toBeGreaterThan(0)
+    expect(r.every((c) => c.variants.length > 1)).toBe(true)
+    expect(r.some((c) => c.type === 'legend') && r.some((c) => c.type === 'rune')).toBe(true)
+  })
+
   it('lista os sets na ordem de lançamento', () => {
     expect(librarySets(cards)[0].id).toBe('OGN')
   })

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { cardImage, findLegend, type LegendCard } from '../data/cards'
+import { findLegend, legendImage, type LegendCard } from '../data/cards'
 import type { MatchState } from '../engine/match'
 import type { GameResult, GameState, PlayerIndex } from '../engine/types'
 import { DomainIcons } from './cards'
@@ -13,8 +13,8 @@ export function accentColors(legend: LegendCard | undefined, player: PlayerIndex
   return [DOMAIN_COLORS[legend.domains[0]], DOMAIN_COLORS[legend.domains[1] ?? legend.domains[0]]]
 }
 
-const artBg = (legend: LegendCard | undefined, width: number): CSSProperties | undefined =>
-  legend ? { backgroundImage: `url("${cardImage(legend, width)}")` } : undefined
+const artBg = (legend: LegendCard | undefined, art: string | undefined, width: number): CSSProperties | undefined =>
+  legend ? { backgroundImage: `url("${legendImage(legend, art, width)}")` } : undefined
 
 /** Tela de "VS" no início de cada jogo, no estilo da tela de carregamento do LoL. */
 export function VersusIntro(props: { match: MatchState; game: GameState; onDone: () => void }) {
@@ -31,7 +31,7 @@ export function VersusIntro(props: { match: MatchState; game: GameState; onDone:
     const [a, b] = accentColors(legend, p)
     return (
       <div key={p} className={`vs-side vs-p${p}`} style={{ '--a': a, '--b': b } as CSSProperties}>
-        <div className="vs-art" style={artBg(legend, 900)} />
+        <div className="vs-art" style={artBg(legend, match.players[p].legendArt, 900)} />
         <div className="vs-label">
           <span className="vs-name">{match.players[p].name}</span>
           {legend && (
@@ -112,7 +112,7 @@ export function VictoryScreen(props: {
 
   return (
     <div className={`victory ${winner === null ? 'draw' : `p${winner}`}`} role="dialog" aria-label="Fim de jogo">
-      <div className="victory-art" style={artBg(legend, 1200)} />
+      <div className="victory-art" style={artBg(legend, winner === null ? undefined : match.players[winner].legendArt, 1200)} />
       {winner !== null && <Particles colors={colors} />}
       <div className="victory-content">
         <span className="victory-title">{winner === null ? 'Empate' : 'Vitória'}</span>

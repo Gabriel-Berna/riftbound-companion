@@ -70,11 +70,20 @@ const championOf = (c) => {
   return tags.find((t) => championNames.has(t)) ?? tags.at(-1) ?? c.name
 }
 
+/** Todas as artes de uma carta (a impressão principal primeiro, depois as alternativas). */
+const artsOf = (name, type) =>
+  cards
+    .filter((c) => c.name === name && isType(c, type))
+    .sort((a, b) => Number(isShowcase(a)) - Number(isShowcase(b)) || a.publicCode.localeCompare(b.publicCode))
+    .map((c) => c.cardImage.url.split('?')[0])
+    .filter((url, i, all) => all.indexOf(url) === i)
+
 const legends = firstPrintings('legend')
   .map((c) => ({
     ...base(c),
     champion: championOf(c),
     domains: (c.domain?.values ?? []).map((d) => d.id),
+    arts: artsOf(c.name, 'legend'),
   }))
   .sort((a, b) => a.champion.localeCompare(b.champion) || a.name.localeCompare(b.name))
 

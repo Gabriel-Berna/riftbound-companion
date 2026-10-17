@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { cardImage, findBattlefield, findLegend, searchBattlefields, searchLegends, type LegendCard } from '../data/cards'
+import { cardImage, findBattlefield, findLegend, imageUrl, legendImage, searchBattlefields, searchLegends, type LegendCard } from '../data/cards'
 import type { Domain } from '../engine/types'
 import { Sheet } from './common'
 import { DOMAIN_COLORS, POWER_LABELS } from './text'
@@ -12,9 +12,26 @@ export const battlefieldArt = (name: string, width = 480) => {
   return art(card && cardImage(card, width))
 }
 
-export const legendArt = (name: string | undefined, width = 480) => {
+export const legendArt = (name: string | undefined, width = 480, chosenArt?: string) => {
   const card = findLegend(name)
-  return art(card && cardImage(card, width))
+  return art(card && legendImage(card, chosenArt, width))
+}
+
+/** Escolha entre as artes de uma lenda (principal e alternativas). */
+export function ArtPicker(props: { legend: LegendCard; current?: string; onPick: (art: string) => void; onClose: () => void }) {
+  const current = props.current && props.legend.arts.includes(props.current) ? props.current : props.legend.image
+  return (
+    <Sheet title={`Artes de ${props.legend.champion}`} onClose={props.onClose}>
+      <div className="art-grid">
+        {props.legend.arts.map((url, i) => (
+          <button key={url} className={`art-option ${url === current ? 'on' : ''}`} onClick={() => props.onPick(url)}>
+            <img src={imageUrl(url, 360)} alt="" loading="lazy" />
+            <small>{i === 0 ? 'Principal' : `Alternativa ${i}`}</small>
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  )
 }
 
 export function DomainIcons({ domains }: { domains: Domain[] }) {
@@ -44,10 +61,10 @@ export function BattlefieldTile(props: { name: string; selected?: boolean; playe
 }
 
 /** Botão com a arte da lenda ao fundo. */
-export function LegendTile(props: { legend: LegendCard; onClick?: () => void; children?: ReactNode }) {
+export function LegendTile(props: { legend: LegendCard; art?: string; onClick?: () => void; children?: ReactNode }) {
   const { legend } = props
   return (
-    <button className="bf-tile legend-tile has-art" style={legendArt(legend.name)} onClick={props.onClick}>
+    <button className="bf-tile legend-tile has-art" style={legendArt(legend.name, 480, props.art)} onClick={props.onClick}>
       <span className="bf-tile-name">{legend.champion}</span>
       <span className="bf-tile-set">
         <DomainIcons domains={legend.domains} /> {legend.name}

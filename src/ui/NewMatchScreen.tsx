@@ -1,17 +1,18 @@
 import { useState } from 'react'
-import { cardImage, findLegend } from '../data/cards'
+import { findLegend, legendImage } from '../data/cards'
 import { createMatch, type MatchFormat, type MatchPlayer } from '../engine/match'
 import { isPlaceholderBattlefield } from '../engine/stats'
 import type { AppAction } from '../store'
-import { BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker } from './cards'
+import { ArtPicker, BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker } from './cards'
 
 interface Draft {
   name: string
   legend: string
+  legendArt: string
   battlefields: [string, string, string]
 }
 
-const emptyDraft = (): Draft => ({ name: '', legend: '', battlefields: ['', '', ''] })
+const emptyDraft = (): Draft => ({ name: '', legend: '', legendArt: '', battlefields: ['', '', ''] })
 
 /** Preenche você com o nome, a lenda e os battlefields do seu perfil. */
 const draftFrom = (p: MatchPlayer | null): Draft =>
@@ -19,6 +20,7 @@ const draftFrom = (p: MatchPlayer | null): Draft =>
     ? {
         name: p.name,
         legend: p.legend ?? '',
+        legendArt: p.legendArt ?? '',
         // Nomes automáticos não são reaproveitados de uma partida para outra.
         battlefields: p.battlefields.map((bf) => (isPlaceholderBattlefield(bf) ? '' : bf)) as Draft['battlefields'],
       }
@@ -33,7 +35,12 @@ function toPlayer(d: Draft, fallbackName: string, prefix: string): MatchPlayer {
     used.add(bf)
     return bf
   }) as MatchPlayer['battlefields']
-  return { name: d.name.trim() || fallbackName, battlefields, ...(d.legend && { legend: d.legend }) }
+  return {
+    name: d.name.trim() || fallbackName,
+    battlefields,
+    ...(d.legend && { legend: d.legend }),
+    ...(d.legend && d.legendArt && { legendArt: d.legendArt }),
+  }
 }
 
 const LABELS = ['Você', 'Oponente'] as const
@@ -50,6 +57,7 @@ export function NewMatchScreen(props: {
   const [drafts, setDrafts] = useState<[Draft, Draft]>(() => [draftFrom(props.profile), emptyDraft()])
   const [picking, setPicking] = useState<{ player: 0 | 1; slot: number } | null>(null)
   const [pickingLegend, setPickingLegend] = useState<0 | 1 | null>(null)
+  const [pickingArt, setPickingArt] = useState<0 | 1 | null>(null)
 
   const update = (p: 0 | 1, patch: Partial<Draft>) =>
     setDrafts((ds) => {
@@ -67,7 +75,7 @@ export function NewMatchScreen(props: {
   const setOpponentName = (name: string) => {
     // Oponente conhecido: já sugere a última lenda que ele usou.
     const knownLegend = props.opponents.get(name)
-    update(1, knownLegend ? { name, legend: knownLegend } : { name })
+    update(1, knownLegend ? { name, legend: knownLegend, legendArt: '' } : { name })
   }
 
   const start = () => {
@@ -106,7 +114,7 @@ export function NewMatchScreen(props: {
               <span className="duelist-label">{LABELS[p]}</span>
               <button
                 className={`duelist-art ${legend ? 'has-legend' : ''}`}
-                style={legend ? { backgroundImage: `url("${cardImage(legend, 480)}")` } : undefined}
+                style={legend ? { backgroundImage: `url("${legendImage(legend, drafts[p].legendArt, 480)}")` } : undefined}
                 onClick={() => setPickingLegend(p)}
                 aria-label={legend ? `Trocar lenda (${legend.champion})` : `Escolher lenda: ${LABELS[p]}`}
               >
@@ -124,6 +132,11 @@ export function NewMatchScreen(props: {
                   </span>
                 )}
               </button>
+              {legend && legend.arts.length > 1 && (
+                <button className="art-btn" onClick={() => setPickingArt(p)} aria-label={`Trocar arte de ${legend.champion}`}>
+                  🎨 Arte · {legend.arts.length}
+                </button>
+              )}
               <input
                 className="duelist-name"
                 value={drafts[p].name}
@@ -203,10 +216,21 @@ export function NewMatchScreen(props: {
       {pickingLegend !== null && (
         <LegendPicker
           onPick={(legend) => {
-            update(pickingLegend, { legend })
+            update(pickingLegend, { legend, legendArt: '' })
             setPickingLegend(null)
           }}
           onClose={() => setPickingLegend(null)}
+        />
+      )}
+      {pickingArt !== null && findLegend(drafts[pickingArt].legend) && (
+        <ArtPicker
+          legend={findLegend(drafts[pickingArt].legend)!}
+          current={drafts[pickingArt].legendArt}
+          onPick={(legendArt) => {
+            update(pickingArt, { legendArt })
+            setPickingArt(null)
+          }}
+          onClose={() => setPickingArt(null)}
         />
       )}
       {picking && (

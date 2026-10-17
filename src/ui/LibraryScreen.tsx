@@ -87,11 +87,12 @@ function CardDetail({ card, onClose }: { card: LibraryCard; onClose: () => void 
   return (
     <Sheet title={card.name} onClose={onClose}>
       <img className={`card-big ${landscape ? 'landscape' : ''}`} src={image(art, landscape ? 900 : 700)} alt={card.name} />
+      {card.variants.length > 0 && <h3 className="variants-title">Artes · {card.variants.length}</h3>}
       {card.variants.length > 0 && (
         <div className="variants" aria-label="Artes">
           {card.variants.map((v) => (
             <button key={v.code} className={`variant ${v.image === art ? 'on' : ''}`} onClick={() => setArt(v.image)} aria-label={`Arte ${v.code}`}>
-              <img src={image(v.image, 160)} alt="" loading="lazy" />
+              <img src={image(v.image, 220)} alt="" loading="lazy" />
               <small>{v.rarity ? RARITY_LABELS[v.rarity] ?? v.rarity : v.code}</small>
             </button>
           ))}
@@ -212,6 +213,9 @@ export function LibraryScreen(props: { onClose: () => void; overlay?: boolean })
             aria-label="Buscar carta"
           />
           <div className="chips scroll">
+            <button className={`chip ${filter.withArts ? 'on' : ''}`} onClick={() => update({ withArts: !filter.withArts })} aria-pressed={filter.withArts}>
+              🎨 Artes alternativas
+            </button>
             {TYPE_FILTERS.map(([type, label]) => (
               <button key={type} className={`chip ${filter.type === type ? 'on' : ''}`} onClick={() => update({ type })}>
                 {label}
@@ -251,6 +255,7 @@ export function LibraryScreen(props: { onClose: () => void; overlay?: boolean })
           {results.slice(0, limit).map((c) => (
             <button key={c.id + c.name} className={`card-thumb ${c.orientation}`} onClick={() => setSelected(c)} aria-label={c.name}>
               <img src={image(c.image, c.orientation === 'landscape' ? 480 : 300)} alt="" loading="lazy" />
+              {c.variants.length > 1 && <span className="art-count">🎨 {c.variants.length}</span>}
             </button>
           ))}
         </div>
