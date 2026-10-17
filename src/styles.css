@@ -3381,3 +3381,15 @@ h3 {
 .deck-choice .hint {
   margin: 0;
 }
+
+.history-main .spacer {
+  flex: 1;
+}
+
+.history-main .icon-btn {
+  margin-left: 0;
+}
+
+.share-btn {
+  border: 1px solid var(--gold-soft);
+}

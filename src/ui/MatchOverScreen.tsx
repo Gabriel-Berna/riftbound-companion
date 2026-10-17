@@ -1,12 +1,25 @@
+import { useState } from 'react'
 import { createMatch, gameWins, matchWinner, type MatchState } from '../engine/match'
 import type { AppAction } from '../store'
 import { findLegend } from '../data/cards'
 import { Brand } from './common'
+import { shareResult } from './share'
 
 export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchState; dispatch: (a: AppAction) => void; onStats: () => void }) {
   const winner = matchWinner(match)
   const wins = gameWins(match)
   const name = (p: 0 | 1) => match.players[p].name
+  const [sharing, setSharing] = useState(false)
+  const share = async () => {
+    setSharing(true)
+    try {
+      await shareResult({ format: match.format, players: match.players, games: match.games, date: new Date().toISOString() })
+    } catch {
+      alert('Não foi possível gerar a imagem.')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   return (
     <main className="screen setup">
@@ -53,6 +66,9 @@ export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchStat
         </ol>
       </section>
 
+      <button className="secondary share-btn" onClick={share} disabled={sharing}>
+        {sharing ? 'Gerando imagem…' : '📤 Compartilhar resultado'}
+      </button>
       <button className="primary big" onClick={() => dispatch({ type: 'newMatch', match: createMatch(match.format, match.players, match.timer?.minutes) })}>
         Revanche
       </button>

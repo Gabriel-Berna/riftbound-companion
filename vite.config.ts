@@ -18,6 +18,12 @@ export default defineConfig({
         // Artes das cartas vêm da CDN da Riot; ficam guardadas no aparelho depois da primeira vez.
         runtimeCaching: [
           {
+            // Cópias locais das artes das lendas (usadas para gerar a imagem de compartilhamento).
+            urlPattern: ({ url }) => url.pathname.includes('/art/legends/'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'legend-art', expiration: { maxEntries: 200 } },
+          },
+          {
             urlPattern: /^https:\/\/cmsassets\.rgpub\.io\/.*/,
             handler: 'CacheFirst',
             options: {

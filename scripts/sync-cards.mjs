@@ -1,6 +1,6 @@
 // Extrai battlefields e lendas da galeria oficial (playriftbound.com) para src/data/*.json.
 // Uso: npm run sync-cards   (rodar de novo a cada set novo)
-import { writeFile } from 'node:fs/promises'
+import { access, mkdir, writeFile } from 'node:fs/promises'
 
 const GALLERY_URL = 'https://playriftbound.com/en-us/card-gallery/'
 const DATA_DIR = new URL('../src/data/', import.meta.url)
@@ -139,4 +139,29 @@ for (const [file, list] of [
 ]) {
   await writeFile(new URL(file, DATA_DIR), JSON.stringify(list, null, 2) + '\n')
   console.log(`${list.length} cartas salvas em src/data/${file}`)
+}
+
+// Cópia local das artes das lendas (mesmo domínio do app): a CDN da Riot não envia cabeçalhos CORS,
+// e o navegador só exporta imagens geradas em canvas (ex.: compartilhar resultado) com imagens do próprio app.
+const ART_DIR = new URL('../public/art/legends/', import.meta.url)
+await mkdir(ART_DIR, { recursive: true })
+let downloaded = 0
+for (const url of legends.flatMap((l) => l.arts)) {
+  const file = new URL(localArtName(url), ART_DIR)
+  try {
+    await access(file)
+    continue
+  } catch {
+    // Ainda não baixada.
+  }
+  const res = await fetch(`${url}?w=540&fm=webp&q=70`)
+  if (!res.ok) throw new Error(`Falha ao baixar ${url}: ${res.status}`)
+  await writeFile(file, Buffer.from(await res.arrayBuffer()))
+  downloaded += 1
+}
+console.log(`${downloaded} artes de lenda baixadas para public/art/legends/`)
+
+/** Nome do arquivo local de uma arte: o identificador da imagem na CDN. */
+function localArtName(url) {
+  return `${url.split('/').pop().split('-')[0]}.webp`
 }

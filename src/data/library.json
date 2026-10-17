@@ -13661,11 +13661,6 @@
         "rarity": "rare"
       },
       {
-        "code": "SFD-054/221",
-        "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/3d425589c74dbff818fa09db134fdd8bb7136420-744x1039.png",
-        "rarity": "rare"
-      },
-      {
         "code": "SFD-054a/221",
         "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/1d2eae793e415c5f53d7b11c335b5f0ed08c2086-744x1039.png",
         "rarity": "showcase"
@@ -13698,7 +13693,18 @@
     "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e63ab3370a6e4ce4baddfba12ab92468f6cc9541-744x1039.png",
     "orientation": "portrait",
     "artist": "Envar Studio",
-    "variants": []
+    "variants": [
+      {
+        "code": "SFD-119/221",
+        "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/e63ab3370a6e4ce4baddfba12ab92468f6cc9541-744x1039.png",
+        "rarity": "epic"
+      },
+      {
+        "code": "SFD-119a/221",
+        "image": "https://cmsassets.rgpub.io/sanity/images/dsfx7636/game_data_live/a5796125bdb0af8ceb60cd0c5c273c6417e0f7da-744x1039.png",
+        "rarity": "showcase"
+      }
+    ]
   },
   {
     "id": "ven-068-166",
