@@ -2600,3 +2600,426 @@ h3 {
   font-size: 0.88rem;
   color: var(--text);
 }
+
+/* ---------- Início (hub) ---------- */
+
+.screen.home {
+  padding-top: 0;
+  gap: 0.9rem;
+}
+
+.hero {
+  position: relative;
+  margin: 0 -16px;
+  min-height: 330px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: var(--bg-1);
+  background-size: 150% auto;
+  background-position: center 8%;
+  background-repeat: no-repeat;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Funde a arte com o fundo do app e deixa o texto legível. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(6, 16, 20, 0.55) 0%, rgba(6, 16, 20, 0) 22%),
+    linear-gradient(0deg, var(--bg-0) 2%, rgba(6, 16, 20, 0.75) 32%, rgba(6, 16, 20, 0) 65%);
+}
+
+.hero-top {
+  padding: max(0.9rem, env(safe-area-inset-top)) 16px 0;
+}
+
+.hero-logo {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--cream);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+.hero-logo small {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  margin-left: 0.3rem;
+}
+
+.hero-info {
+  padding: 0 16px 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.hero-info h1 {
+  font-family: var(--display);
+  font-size: 2.2rem;
+  color: var(--cream);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.hero-legend {
+  color: var(--cream);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 4px #000;
+}
+
+.hero-record {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.hero-record b {
+  color: var(--orange-2);
+}
+
+.new-match {
+  --cut: 14px;
+  padding: 1.15rem;
+  font-size: 1.3rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 30px -10px var(--orange-glow);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.tile {
+  --cut: 10px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.85rem 0.9rem;
+  background: linear-gradient(180deg, rgba(20, 44, 54, 0.95), rgba(12, 28, 35, 0.95));
+  box-shadow: inset 0 0 0 1px var(--line);
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut));
+}
+
+.tile:active {
+  filter: brightness(1.15);
+}
+
+.tile-icon {
+  font-size: 1.3rem;
+  margin-bottom: 0.2rem;
+}
+
+.tile b {
+  font-family: var(--display);
+  color: var(--cream);
+  font-size: 1rem;
+}
+
+.tile small {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.tile.rematch {
+  box-shadow: inset 0 0 0 1px rgba(239, 125, 0, 0.6);
+  background:
+    radial-gradient(ellipse at 100% 0%, rgba(239, 125, 0, 0.18), transparent 70%),
+    linear-gradient(180deg, rgba(20, 44, 54, 0.95), rgba(12, 28, 35, 0.95));
+}
+
+.recent h2 {
+  font-family: var(--display);
+  font-size: 0.9rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.5rem;
+}
+
+.recent ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0.7rem 0.45rem 0.45rem;
+  border-radius: 10px;
+  background: rgba(6, 16, 20, 0.5);
+  border: 1px solid var(--line-soft);
+}
+
+.recent-art {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--surface-3);
+  background-size: 180% auto;
+  background-position: center 12%;
+  box-shadow: 0 0 0 2px var(--line);
+}
+
+.recent-item.win .recent-art {
+  box-shadow: 0 0 0 2px #3ecf8e;
+}
+
+.recent-item.loss .recent-art {
+  box-shadow: 0 0 0 2px var(--danger);
+}
+
+.recent-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.recent-main b {
+  color: var(--cream);
+}
+
+.recent-main small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.recent-score {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.recent-score.win {
+  color: #3ecf8e;
+}
+
+.recent-score.loss {
+  color: var(--danger);
+}
+
+/* ---------- Nova partida (duelo) ---------- */
+
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.page-head h1 {
+  font-family: var(--display);
+  font-size: 1.8rem;
+  color: var(--cream);
+}
+
+.duel {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.duelist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.duelist-label {
+  font-family: var(--display);
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.duelist.p0 .duelist-label {
+  color: var(--p0);
+}
+
+.duelist.p1 .duelist-label {
+  color: var(--p1);
+}
+
+.duelist-art {
+  --cut: 14px;
+  position: relative;
+  isolation: isolate;
+  aspect-ratio: 3 / 4;
+  display: flex;
+  align-items: flex-end;
+  padding: 0.7rem;
+  text-align: left;
+  background-color: var(--surface);
+  background-size: 165% auto;
+  background-position: center 6%;
+  background-repeat: no-repeat;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+}
+
+.duelist-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.duelist.p0 .duelist-art.has-legend::before {
+  box-shadow:
+    inset 0 0 0 2px var(--p0),
+    inset 0 -40px 40px -20px var(--p0-glow);
+}
+
+.duelist.p1 .duelist-art.has-legend::before {
+  box-shadow:
+    inset 0 0 0 2px var(--p1),
+    inset 0 -40px 40px -20px var(--p1-glow);
+}
+
+.duelist-art.has-legend::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(0deg, rgba(6, 16, 20, 0.92) 0%, rgba(6, 16, 20, 0) 55%);
+}
+
+.duelist-legend {
+  display: flex;
+  flex-direction: column;
+}
+
+.duelist-legend b {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  color: var(--cream);
+  text-shadow: 0 1px 4px #000;
+}
+
+.duelist-legend small {
+  font-size: 0.7rem;
+  color: var(--cream);
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-shadow: 0 1px 3px #000;
+}
+
+.duelist-empty {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.duelist-empty span {
+  font-size: 2.2rem;
+  line-height: 1;
+  color: var(--gold);
+}
+
+.duelist-name {
+  width: 100%;
+  background: rgba(6, 16, 20, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+  font-weight: 600;
+}
+
+.duelist-name:focus {
+  outline: 2px solid var(--orange);
+  outline-offset: -1px;
+}
+
+.duel-vs {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 0.5rem);
+  transform: translate(-50%, -50%);
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  color: var(--cream);
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--bg-1) 55%, transparent 56%);
+  box-shadow: 0 0 0 2px var(--gold-soft);
+  text-shadow: 0 0 12px var(--orange-glow);
+  pointer-events: none;
+}
+
+.quick-opponents {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.quick-opponents .hint {
+  margin: 0;
+}
+
+.bf-details summary {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  list-style: none;
+}
+
+.bf-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.bf-details summary span {
+  font-family: var(--display);
+  font-size: 0.95rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.bf-details summary span::after {
+  content: ' ▾';
+  color: var(--muted);
+}
+
+.bf-details[open] summary span::after {
+  content: ' ▴';
+}
+
+.bf-details summary small {
+  color: var(--muted);
+}
+
+.start-match {
+  position: sticky;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 3;
+  box-shadow: 0 8px 30px -6px rgba(0, 0, 0, 0.7);
+}

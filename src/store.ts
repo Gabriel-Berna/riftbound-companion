@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react'
-import { isMatchOver, matchReducer, type MatchAction, type MatchState } from './engine/match'
+import { isMatchOver, matchReducer, type MatchAction, type MatchPlayer, type MatchState } from './engine/match'
 import { mergeRecords, recordFromMatch, type MatchRecord } from './engine/stats'
 
 export interface Settings {
@@ -22,6 +22,8 @@ export interface AppState {
   /** Partidas encerradas, da mais recente à mais antiga. */
   records: MatchRecord[]
   settings: Settings
+  /** Você: nome, lenda e battlefields usados por padrão (atualizado a cada partida). */
+  profile: MatchPlayer | null
 }
 
 export type AppAction =
@@ -35,6 +37,7 @@ export type AppAction =
   | { type: 'importRecords'; records: MatchRecord[] }
   | { type: 'clearRecords' }
   | { type: 'setting'; key: keyof Settings; value: boolean }
+  | { type: 'setProfile'; profile: MatchPlayer }
 
 const STATE_KEY = 'riftbound-companion/v1'
 // As partidas ficam numa chave própria, para não se perderem se o formato do estado mudar.
@@ -47,7 +50,7 @@ export const newId = (): string =>
 function reducer(s: AppState, a: AppAction): AppState {
   switch (a.type) {
     case 'newMatch':
-      return { ...s, match: a.match, history: [] }
+      return { ...s, match: a.match, history: [], profile: a.match.players[0] }
     case 'match': {
       if (!s.match) return s
       const next = matchReducer(s.match, a.action)
@@ -80,6 +83,8 @@ function reducer(s: AppState, a: AppAction): AppState {
       return { ...s, records: [] }
     case 'setting':
       return { ...s, settings: { ...s.settings, [a.key]: a.value } }
+    case 'setProfile':
+      return { ...s, profile: a.profile }
   }
 }
 
@@ -108,14 +113,15 @@ function load(): AppState {
     tableMode: saved?.tableMode ?? true,
     records: read<MatchRecord[]>(RECORDS_KEY) ?? [],
     settings: { ...DEFAULT_SETTINGS, ...saved?.settings },
+    profile: saved?.profile ?? null,
   }
 }
 
 /** Estado do app, salvo no aparelho para sobreviver a recarregamentos. */
 export function useAppStore() {
   const [state, dispatch] = useReducer(reducer, undefined, load)
-  const { match, history, tableMode, records, settings } = state
-  useEffect(() => write(STATE_KEY, { match, history, tableMode, settings }), [match, history, tableMode, settings])
+  const { match, history, tableMode, records, settings, profile } = state
+  useEffect(() => write(STATE_KEY, { match, history, tableMode, settings, profile }), [match, history, tableMode, settings, profile])
   useEffect(() => write(RECORDS_KEY, records), [records])
   return [state, dispatch] as const
 }

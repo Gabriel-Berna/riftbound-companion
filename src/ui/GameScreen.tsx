@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import { conquerOutcome, runesToChannel, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
 import { DOMAINS, type Battlefield, type Domain, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
-import type { AppAction, AppState, Settings } from '../store'
+import type { AppAction, AppState } from '../store'
 import { findBattlefield, findLegend } from '../data/cards'
 import { battlefieldArt, DomainIcons, legendArt } from './cards'
 import { ScoreGems, Sheet, Stepper } from './common'
 import { useGameFeedback, useWakeLock } from './effects'
 import { LibraryScreen } from './LibraryScreen'
+import { SettingsToggles } from './SettingsScreen'
 import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
 import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
@@ -321,11 +322,6 @@ function Toast({ game }: { game: GameState }) {
   )
 }
 
-const SETTING_LABELS: [keyof Settings, string, string][] = [
-  ['sound', 'Sons', 'Ao pontuar, passar a vez e vencer.'],
-  ['vibration', 'Vibração', 'Vibra ao pontuar (Android).'],
-  ['keepAwake', 'Tela sempre ligada', 'Durante a partida, a tela não apaga.'],
-]
 
 function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
   const { game, act } = props
@@ -336,21 +332,7 @@ function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameActio
   return (
     <Sheet title="Menu" onClose={props.onClose}>
       <h3>Preferências</h3>
-      <div className="toggles">
-        {SETTING_LABELS.map(([key, label, hint]) => (
-          <label key={key} className="toggle">
-            <span>
-              <b>{label}</b>
-              <small>{hint}</small>
-            </span>
-            <input
-              type="checkbox"
-              checked={props.state.settings[key]}
-              onChange={(e) => props.dispatch({ type: 'setting', key, value: e.target.checked })}
-            />
-          </label>
-        ))}
-      </div>
+      <SettingsToggles settings={props.state.settings} dispatch={props.dispatch} />
       <h3>Partida</h3>
       <div className="actions">
         <button className="action" onClick={close(() => props.dispatch({ type: 'toggleTableMode' }))}>

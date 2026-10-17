@@ -4,6 +4,10 @@ App de celular (PWA) de apoio para partidas do TCG físico **Riftbound** (Riot G
 
 ## Funcionalidades (v0.1)
 
+- **Início**: arte da sua lenda, retrospecto, botão de nova partida, revanche em um toque, atalhos e últimas partidas.
+- **Nova partida em formato de duelo**: retratos das duas lendas, oponentes recentes em um toque, battlefields opcionais recolhidos.
+- **Ajustes**: perfil (nome e lenda principal), preferências e aviso legal.
+
 - **Placar por battlefield**: registra Hold e Conquer, impede pontuar o mesmo battlefield duas vezes no turno e aplica a **regra do Ponto Final** (CR 473.1.b).
 - **Um toque por turno**: o botão "Passar a vez" faz o Hold automático dos battlefields do novo jogador, esvazia o rune pool e lembra da runa extra de quem joga em segundo.
 - **Recursos**: XP e rune pool (Energy e Power por domínio), que esvazia sozinho nos momentos certos.

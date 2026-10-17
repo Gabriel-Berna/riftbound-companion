@@ -1,10 +1,9 @@
 import { useState } from 'react'
+import { cardImage, findLegend } from '../data/cards'
 import { createMatch, type MatchFormat, type MatchPlayer } from '../engine/match'
 import { isPlaceholderBattlefield } from '../engine/stats'
 import type { AppAction } from '../store'
-import { findLegend } from '../data/cards'
-import { BattlefieldPicker, BattlefieldTile, LegendPicker, LegendTile } from './cards'
-import { Brand } from './common'
+import { BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker } from './cards'
 
 interface Draft {
   name: string
@@ -14,9 +13,8 @@ interface Draft {
 
 const emptyDraft = (): Draft => ({ name: '', legend: '', battlefields: ['', '', ''] })
 
-
-/** Preenche você com o nome, a lenda e os battlefields da sua última partida. */
-const draftFrom = (p: MatchPlayer | undefined): Draft =>
+/** Preenche você com o nome, a lenda e os battlefields do seu perfil. */
+const draftFrom = (p: MatchPlayer | null): Draft =>
   p
     ? {
         name: p.name,
@@ -38,18 +36,18 @@ function toPlayer(d: Draft, fallbackName: string, prefix: string): MatchPlayer {
   return { name: d.name.trim() || fallbackName, battlefields, ...(d.legend && { legend: d.legend }) }
 }
 
+const LABELS = ['Você', 'Oponente'] as const
+
 export function NewMatchScreen(props: {
   dispatch: (a: AppAction) => void
-  /** Você na última partida registrada. */
-  lastMe?: MatchPlayer
+  profile: MatchPlayer | null
   /** Última lenda usada por cada oponente já enfrentado. */
   opponents: Map<string, string | undefined>
-  onStats: () => void
-  onLibrary: () => void
+  onBack: () => void
 }) {
   const { dispatch } = props
   const [format, setFormat] = useState<MatchFormat>('match')
-  const [drafts, setDrafts] = useState<[Draft, Draft]>(() => [draftFrom(props.lastMe), emptyDraft()])
+  const [drafts, setDrafts] = useState<[Draft, Draft]>(() => [draftFrom(props.profile), emptyDraft()])
   const [picking, setPicking] = useState<{ player: 0 | 1; slot: number } | null>(null)
   const [pickingLegend, setPickingLegend] = useState<0 | 1 | null>(null)
 
@@ -66,6 +64,12 @@ export function NewMatchScreen(props: {
     update(p, { battlefields })
   }
 
+  const setOpponentName = (name: string) => {
+    // Oponente conhecido: já sugere a última lenda que ele usou.
+    const knownLegend = props.opponents.get(name)
+    update(1, knownLegend ? { name, legend: knownLegend } : { name })
+  }
+
   const start = () => {
     let p1 = toPlayer(drafts[0], 'Jogador 1', 'A')
     const p2 = toPlayer(drafts[1], 'Jogador 2', 'B')
@@ -73,76 +77,92 @@ export function NewMatchScreen(props: {
     dispatch({ type: 'newMatch', match: createMatch(format, [p1, p2]) })
   }
 
+  const recentOpponents = [...props.opponents.keys()].slice(0, 4)
+  const bfCount = (p: 0 | 1) => drafts[p].battlefields.filter(Boolean).length
+
   return (
-    <main className="screen setup">
-      <Brand subtitle="Placar e guia de partida · 1v1" />
-      <div className="row-buttons home-nav">
-        <button className="secondary" onClick={props.onStats}>
-          📊 Estatísticas
+    <main className="screen setup new-match-screen">
+      <header className="page-head">
+        <button className="link back" onClick={props.onBack}>
+          ← Início
         </button>
-        <button className="secondary" onClick={props.onLibrary}>
-          📚 Cartas
+        <h1>Nova partida</h1>
+      </header>
+
+      <div className="segmented" role="radiogroup" aria-label="Formato">
+        <button role="radio" aria-checked={format === 'match'} className={format === 'match' ? 'on' : ''} onClick={() => setFormat('match')}>
+          Melhor de 3
+        </button>
+        <button role="radio" aria-checked={format === 'duel'} className={format === 'duel' ? 'on' : ''} onClick={() => setFormat('duel')}>
+          Jogo único
         </button>
       </div>
 
-      <section className="card">
-        <h2>Formato</h2>
-        <div className="segmented" role="radiogroup">
-          <button role="radio" aria-checked={format === 'match'} className={format === 'match' ? 'on' : ''} onClick={() => setFormat('match')}>
-            Melhor de 3
-          </button>
-          <button role="radio" aria-checked={format === 'duel'} className={format === 'duel' ? 'on' : ''} onClick={() => setFormat('duel')}>
-            Jogo único
-          </button>
-        </div>
-        <p className="hint">
-          {format === 'match'
-            ? 'Cada jogador escolhe o battlefield de cada jogo. Quem perde escolhe se começa o próximo.'
-            : 'O battlefield de cada jogador é sorteado entre os 3 do deck.'}
-        </p>
+      <section className="duel">
+        {([0, 1] as const).map((p) => {
+          const legend = findLegend(drafts[p].legend)
+          return (
+            <div key={p} className={`duelist p${p}`}>
+              <span className="duelist-label">{LABELS[p]}</span>
+              <button
+                className={`duelist-art ${legend ? 'has-legend' : ''}`}
+                style={legend ? { backgroundImage: `url("${cardImage(legend, 480)}")` } : undefined}
+                onClick={() => setPickingLegend(p)}
+                aria-label={legend ? `Trocar lenda (${legend.champion})` : `Escolher lenda: ${LABELS[p]}`}
+              >
+                {legend ? (
+                  <span className="duelist-legend">
+                    <b>{legend.champion}</b>
+                    <small>
+                      <DomainIcons domains={legend.domains} /> {legend.name}
+                    </small>
+                  </span>
+                ) : (
+                  <span className="duelist-empty">
+                    <span>+</span>
+                    Lenda
+                  </span>
+                )}
+              </button>
+              <input
+                className="duelist-name"
+                value={drafts[p].name}
+                placeholder={`Jogador ${p + 1}`}
+                aria-label={`Nome: ${LABELS[p]}`}
+                list={p === 1 ? 'known-opponents' : undefined}
+                onChange={(e) => (p === 1 ? setOpponentName(e.target.value) : update(0, { name: e.target.value }))}
+              />
+            </div>
+          )
+        })}
+        <span className="duel-vs" aria-hidden="true">
+          VS
+        </span>
       </section>
 
-      {([0, 1] as const).map((p) => (
-        <section key={p} className={`card player-card p${p}`}>
-          <h2>{p === 0 ? 'Você · Jogador 1' : 'Oponente · Jogador 2'}</h2>
-          <label className="field">
-            <span>Nome</span>
-            <input
-              value={drafts[p].name}
-              placeholder={`Jogador ${p + 1}`}
-              list={p === 1 ? 'known-opponents' : undefined}
-              onChange={(e) => {
-                const name = e.target.value
-                // Oponente conhecido: já sugere a última lenda que ele usou.
-                const knownLegend = p === 1 && !drafts[1].legend ? props.opponents.get(name) : undefined
-                update(p, knownLegend ? { name, legend: knownLegend } : { name })
-              }}
-            />
-          </label>
-          <div className="field">
-            <span>Lenda (opcional)</span>
-            {findLegend(drafts[p].legend) ? (
-              <LegendTile legend={findLegend(drafts[p].legend)!} onClick={() => setPickingLegend(p)}>
-                <span
-                  className="bf-tile-clear"
-                  role="button"
-                  aria-label="Remover lenda"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    update(p, { legend: '' })
-                  }}
-                >
-                  ✕
-                </span>
-              </LegendTile>
-            ) : (
-              <button className="bf-slot-empty" onClick={() => setPickingLegend(p)}>
-                + Escolher lenda
+      {recentOpponents.length > 0 && (
+        <div className="quick-opponents">
+          <span className="hint">Oponentes recentes:</span>
+          <div className="chips">
+            {recentOpponents.map((o) => (
+              <button key={o} className={`chip ${drafts[1].name === o ? 'on' : ''}`} onClick={() => setOpponentName(o)}>
+                {o}
               </button>
-            )}
+            ))}
           </div>
-          <div className="field">
-            <span>Battlefields do deck (opcional)</span>
+        </div>
+      )}
+
+      <details className="card bf-details">
+        <summary>
+          <span>Battlefields</span>
+          <small>
+            Você {bfCount(0)}/3 · Oponente {bfCount(1)}/3 · opcional
+          </small>
+        </summary>
+        {([0, 1] as const).map((p) => (
+          <div key={p} className="field">
+            <span className={`c${p}`}>{LABELS[p]}</span>
             <div className="bf-slots">
               {drafts[p].battlefields.map((bf, i) =>
                 bf ? (
@@ -167,11 +187,11 @@ export function NewMatchScreen(props: {
               )}
             </div>
           </div>
-        </section>
-      ))}
+        ))}
+      </details>
 
-      <button className="primary big" onClick={start}>
-        Começar partida
+      <button className="primary big start-match" onClick={start}>
+        ⚔ Começar partida
       </button>
 
       <datalist id="known-opponents">
@@ -179,12 +199,6 @@ export function NewMatchScreen(props: {
           <option key={o} value={o} />
         ))}
       </datalist>
-
-      <p className="legal">
-        Riftbound Companion não é endossado pela Riot Games e não reflete as opiniões da Riot Games ou de qualquer pessoa
-        envolvida na produção ou gestão de propriedades da Riot Games. Riot Games e todas as propriedades associadas são
-        marcas comerciais ou registradas da Riot Games, Inc.
-      </p>
 
       {pickingLegend !== null && (
         <LegendPicker
