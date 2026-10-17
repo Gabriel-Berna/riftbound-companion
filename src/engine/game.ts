@@ -12,6 +12,12 @@ import {
 
 export const VICTORY_SCORE_1V1 = 8
 
+/** Battlefields que alteram os pontos necessários para vencer enquanto estão em jogo. */
+const VICTORY_SCORE_MODIFIERS: Record<string, number> = {
+  // "Increase the points needed to win the game by 1."
+  "Aspirant's Climb": 1,
+}
+
 export type GameAction =
   /** Encerra o turno atual e começa o do oponente. */
   | { type: 'passTurn' }
@@ -28,6 +34,8 @@ export type GameAction =
   | { type: 'adjustPower'; player: PlayerIndex; kind: PowerKind; delta: number }
   | { type: 'clearPool'; player: PlayerIndex }
   | { type: 'concede'; player: PlayerIndex }
+  /** Vitória concedida por um efeito de carta (ex.: battlefield que dá a vitória com 7+ unidades). */
+  | { type: 'winByEffect'; player: PlayerIndex }
   | { type: 'declareDraw' }
 
 export interface NewGameOptions {
@@ -52,8 +60,9 @@ export function createGame(opts: NewGameOptions): GameState {
     owner: i as PlayerIndex,
     controller: null,
   }))
+  const modifier = opts.battlefieldNames.reduce((sum, name) => sum + (VICTORY_SCORE_MODIFIERS[name] ?? 0), 0)
   return {
-    victoryScore: opts.victoryScore ?? VICTORY_SCORE_1V1,
+    victoryScore: (opts.victoryScore ?? VICTORY_SCORE_1V1) + modifier,
     players: [newPlayer(opts.playerNames[0]), newPlayer(opts.playerNames[1])],
     battlefields,
     firstPlayer: opts.firstPlayer,
@@ -165,6 +174,9 @@ function apply(s: GameState, a: GameAction): void {
 
     case 'concede':
       return finish(s, { kind: 'win', winner: other(a.player), reason: 'concede' })
+
+    case 'winByEffect':
+      return finish(s, { kind: 'win', winner: a.player, reason: 'effect' })
 
     case 'declareDraw':
       return finish(s, { kind: 'draw' })

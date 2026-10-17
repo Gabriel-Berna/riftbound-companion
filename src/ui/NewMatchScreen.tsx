@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { createMatch, type MatchFormat, type MatchPlayer } from '../engine/match'
 import type { AppAction } from '../store'
+import { BattlefieldPicker, BattlefieldTile } from './battlefields'
+import { Brand } from './common'
 
 interface Draft {
   name: string
@@ -24,6 +26,7 @@ function toPlayer(d: Draft, fallbackName: string, prefix: string): MatchPlayer {
 export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void }) {
   const [format, setFormat] = useState<MatchFormat>('match')
   const [drafts, setDrafts] = useState<[Draft, Draft]>([emptyDraft(), emptyDraft()])
+  const [picking, setPicking] = useState<{ player: 0 | 1; slot: number } | null>(null)
 
   const update = (p: 0 | 1, patch: Partial<Draft>) =>
     setDrafts((ds) => {
@@ -31,6 +34,12 @@ export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void 
       next[p] = { ...next[p], ...patch }
       return next
     })
+
+  const setBattlefield = (p: 0 | 1, slot: number, name: string) => {
+    const battlefields = [...drafts[p].battlefields] as Draft['battlefields']
+    battlefields[slot] = name
+    update(p, { battlefields })
+  }
 
   const start = () => {
     let p1 = toPlayer(drafts[0], 'Jogador 1', 'A')
@@ -41,10 +50,7 @@ export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void 
 
   return (
     <main className="screen setup">
-      <header className="brand">
-        <h1>Riftbound Companion</h1>
-        <p>Placar e guia de turno para o 1v1</p>
-      </header>
+      <Brand subtitle="Placar e guia de partida · 1v1" />
 
       <section className="card">
         <h2>Formato</h2>
@@ -70,28 +76,55 @@ export function NewMatchScreen({ dispatch }: { dispatch: (a: AppAction) => void 
             <span>Nome</span>
             <input value={drafts[p].name} placeholder={`Jogador ${p + 1}`} onChange={(e) => update(p, { name: e.target.value })} />
           </label>
-          <fieldset className="field">
-            <legend>Battlefields do deck (opcional)</legend>
-            {drafts[p].battlefields.map((bf, i) => (
-              <input
-                key={i}
-                value={bf}
-                placeholder={`Battlefield ${p === 0 ? 'A' : 'B'}${i + 1}`}
-                aria-label={`Battlefield ${i + 1} do jogador ${p + 1}`}
-                onChange={(e) => {
-                  const battlefields = [...drafts[p].battlefields] as Draft['battlefields']
-                  battlefields[i] = e.target.value
-                  update(p, { battlefields })
-                }}
-              />
-            ))}
-          </fieldset>
+          <div className="field">
+            <span>Battlefields do deck (opcional)</span>
+            <div className="bf-slots">
+              {drafts[p].battlefields.map((bf, i) =>
+                bf ? (
+                  <BattlefieldTile key={i} name={bf} onClick={() => setPicking({ player: p, slot: i })}>
+                    <span
+                      className="bf-tile-clear"
+                      role="button"
+                      aria-label={`Remover ${bf}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setBattlefield(p, i, '')
+                      }}
+                    >
+                      ✕
+                    </span>
+                  </BattlefieldTile>
+                ) : (
+                  <button key={i} className="bf-slot-empty" onClick={() => setPicking({ player: p, slot: i })}>
+                    + Battlefield {i + 1}
+                  </button>
+                ),
+              )}
+            </div>
+          </div>
         </section>
       ))}
 
       <button className="primary big" onClick={start}>
         Começar partida
       </button>
+
+      <p className="legal">
+        Riftbound Companion não é endossado pela Riot Games e não reflete as opiniões da Riot Games ou de qualquer pessoa
+        envolvida na produção ou gestão de propriedades da Riot Games. Riot Games e todas as propriedades associadas são
+        marcas comerciais ou registradas da Riot Games, Inc.
+      </p>
+
+      {picking && (
+        <BattlefieldPicker
+          exclude={drafts[picking.player].battlefields.filter((b, i) => b && i !== picking.slot)}
+          onPick={(name) => {
+            setBattlefield(picking.player, picking.slot, name)
+            setPicking(null)
+          }}
+          onClose={() => setPicking(null)}
+        />
+      )}
     </main>
   )
 }

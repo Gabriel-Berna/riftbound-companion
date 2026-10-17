@@ -24,7 +24,7 @@ export interface PlayerState {
 }
 
 export type GameResult =
-  | { kind: 'win'; winner: PlayerIndex; reason: 'points' | 'concede' }
+  | { kind: 'win'; winner: PlayerIndex; reason: 'points' | 'concede' | 'effect' }
   | { kind: 'draw' }
 
 export type LogEntry =

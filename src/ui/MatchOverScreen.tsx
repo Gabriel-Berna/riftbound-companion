@@ -1,5 +1,6 @@
 import { createMatch, gameWins, matchWinner, type MatchState } from '../engine/match'
 import type { AppAction } from '../store'
+import { Brand } from './common'
 
 export function MatchOverScreen({ match, dispatch }: { match: MatchState; dispatch: (a: AppAction) => void }) {
   const winner = matchWinner(match)
@@ -8,14 +9,16 @@ export function MatchOverScreen({ match, dispatch }: { match: MatchState; dispat
 
   return (
     <main className="screen setup">
-      <header className="brand">
-        <h1>{winner === null ? 'Empate' : <><span className={`c${winner}`}>{name(winner)}</span> venceu!</>}</h1>
-        {match.format === 'match' && (
-          <p className="match-score">
-            <span className="c0">{name(0)}</span> {wins[0]} × {wins[1]} <span className="c1">{name(1)}</span>
-          </p>
-        )}
-      </header>
+      <Brand
+        title={winner === null ? 'Empate' : <><span className={`c${winner}`}>{name(winner)}</span> venceu!</>}
+        subtitle={
+          match.format === 'match' && (
+            <span className="match-score">
+              <span className="c0">{name(0)}</span> {wins[0]} × {wins[1]} <span className="c1">{name(1)}</span>
+            </span>
+          )
+        }
+      />
 
       <section className="card">
         <h2>Jogos</h2>

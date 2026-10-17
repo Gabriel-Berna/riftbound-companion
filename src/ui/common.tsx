@@ -44,3 +44,36 @@ export function Stepper(props: {
     </div>
   )
 }
+
+/** Cabeçalho com a marca do app. */
+export function Brand(props: { title?: ReactNode; subtitle?: ReactNode }) {
+  return (
+    <header className="brand">
+      {props.title ? (
+        <h1>{props.title}</h1>
+      ) : (
+        <h1 className="logo">
+          Riftbound
+          <small>Companion</small>
+        </h1>
+      )}
+      <div className="ornament" aria-hidden="true">
+        <i />
+        <b />
+        <i />
+      </div>
+      {props.subtitle && <p>{props.subtitle}</p>}
+    </header>
+  )
+}
+
+/** Trilha de gemas mostrando o progresso até a vitória. */
+export function ScoreGems(props: { points: number; target: number }) {
+  return (
+    <div className="gems" aria-hidden="true">
+      {Array.from({ length: props.target }, (_, i) => (
+        <i key={i} className={i < props.points ? 'on' : ''} />
+      ))}
+    </div>
+  )
+}

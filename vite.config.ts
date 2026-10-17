@@ -13,13 +13,28 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Artes das cartas vêm da CDN da Riot; ficam guardadas no aparelho depois da primeira vez.
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/cmsassets\.rgpub\.io\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'card-art',
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 90 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
       manifest: {
         name: 'Riftbound Companion',
         short_name: 'Riftbound',
         description: 'Placar e guia de turno para partidas de Riftbound',
         lang: 'pt-BR',
-        theme_color: '#0e1117',
-        background_color: '#0e1117',
+        theme_color: '#061014',
+        background_color: '#061014',
         display: 'standalone',
         orientation: 'portrait',
         icons: [

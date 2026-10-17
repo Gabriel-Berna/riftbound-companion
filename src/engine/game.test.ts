@@ -157,6 +157,24 @@ describe('vitória (CR 194.2)', () => {
   })
 })
 
+describe('battlefields que alteram a vitória', () => {
+  it("Aspirant's Climb aumenta em 1 os pontos para vencer", () => {
+    const s = createGame({ playerNames: ['Ana', 'Bruno'], battlefieldNames: ["Aspirant's Climb", 'Zaun'], firstPlayer: 0 })
+    expect(s.victoryScore).toBe(9)
+    expect(run(withPoints(s, 8, 2), { type: 'adjustPoints', player: 0, delta: 0 }).result).toBeNull()
+  })
+
+  it('a regra do Ponto Final usa o novo alvo', () => {
+    const s = withPoints(createGame({ playerNames: ['Ana', 'Bruno'], battlefieldNames: ["Aspirant's Climb", 'Zaun'], firstPlayer: 0 }), 7, 2)
+    expect(conquerOutcome(s, 0, 'bf1')).toBe('point')
+    expect(conquerOutcome(withPoints(s, 8, 2), 0, 'bf1')).toBe('blocked')
+  })
+
+  it('vitória por efeito de carta encerra o jogo', () => {
+    expect(run(newGame(0), { type: 'winByEffect', player: 1 }).result).toEqual({ kind: 'win', winner: 1, reason: 'effect' })
+  })
+})
+
 describe('Burn Out (CR 432)', () => {
   it('o oponente de quem sofreu Burn Out ganha 1 ponto', () => {
     const s = run(newGame(0), { type: 'burnOut', player: 0 })

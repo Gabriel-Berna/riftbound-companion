@@ -45,8 +45,8 @@ export function describeLog(g: GameState, e: LogEntry): string {
       return `Turno ${e.turn}: vez de ${name(g, e.player)}`
     case 'result':
       if (e.result.kind === 'draw') return 'Jogo empatado'
-      return e.result.reason === 'concede'
-        ? `${name(g, e.result.winner === 0 ? 1 : 0)} concedeu: ${name(g, e.result.winner)} vence`
-        : `${name(g, e.result.winner)} venceu o jogo`
+      if (e.result.reason === 'concede') return `${name(g, e.result.winner === 0 ? 1 : 0)} concedeu: ${name(g, e.result.winner)} vence`
+      if (e.result.reason === 'effect') return `${name(g, e.result.winner)} venceu por efeito de carta`
+      return `${name(g, e.result.winner)} venceu o jogo`
   }
 }

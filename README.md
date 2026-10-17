@@ -10,6 +10,7 @@ App de celular (PWA) de apoio para partidas do TCG físico **Riftbound** (Riot G
 - **Burn Out**, pontos por efeito de carta, concessão e empate.
 - **Histórico** do jogo e **desfazer**.
 - **Melhor de 3** e **jogo único**: battlefields usados saem da partida, quem perdeu escolhe quem começa.
+- **Banco de battlefields** da galeria oficial: busca por nome com a arte de cada um, habilidade visível durante o jogo e regras especiais (ex.: Aspirant's Climb aumenta o alvo para 9 pontos).
 - Painel do oponente girado para jogar frente a frente, e funciona offline.
 
 ## Desenvolvimento
@@ -19,6 +20,7 @@ npm install
 npm run dev      # servidor local
 npm test         # testes das regras (Vitest)
 npm run build    # verificação de tipos + build de produção
+npm run sync-cards  # atualiza src/data/battlefields.json a partir da galeria oficial
 ```
 
 A lógica do jogo fica em `src/engine/` (sem dependência de interface, com testes) e a interface em `src/ui/`.
@@ -26,6 +28,10 @@ A lógica do jogo fica em `src/engine/` (sem dependência de interface, com test
 ## Publicação
 
 Cada push no `main` roda os testes e publica no GitHub Pages (`.github/workflows/deploy.yml`).
+
+## Aviso legal
+
+Riftbound Companion não é endossado pela Riot Games e não reflete as opiniões da Riot Games ou de qualquer pessoa envolvida na produção ou gestão de propriedades da Riot Games. Riot Games e todas as propriedades associadas são marcas comerciais ou registradas da Riot Games, Inc. Projeto de fã, gratuito e sem fins comerciais.
 
 ## Documentação das regras
 

@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { availableBattlefields, firstPlayerRule, gameWins, type MatchState } from '../engine/match'
 import type { PlayerIndex } from '../engine/types'
 import type { AppAction } from '../store'
+import { BattlefieldTile } from './battlefields'
+import { Brand } from './common'
 
 const pick = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)]
 
@@ -30,14 +32,16 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
 
   return (
     <main className="screen setup">
-      <header className="brand">
-        <h1>{isDuel ? 'Preparar o jogo' : `Jogo ${match.games.length + 1}`}</h1>
-        {!isDuel && (
-          <p className="match-score">
-            <span className="c0">{name(0)}</span> {wins[0]} × {wins[1]} <span className="c1">{name(1)}</span>
-          </p>
-        )}
-      </header>
+      <Brand
+        title={isDuel ? 'Preparar o jogo' : `Jogo ${match.games.length + 1}`}
+        subtitle={
+          !isDuel && (
+            <span className="match-score">
+              <span className="c0">{name(0)}</span> {wins[0]} × {wins[1]} <span className="c1">{name(1)}</span>
+            </span>
+          )
+        }
+      />
 
       <section className="card">
         <h2>Battlefields</h2>
@@ -50,13 +54,11 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
           <div key={p} className="bf-choice">
             <h3 className={`c${p}`}>{name(p)}</h3>
             {isDuel ? (
-              <p className="chosen">{choices[p] ?? 'Ainda não sorteado'}</p>
+              choices[p] ? <BattlefieldTile name={choices[p]} selected player={p} /> : <p className="chosen">Ainda não sorteado</p>
             ) : (
-              <div className="chips">
+              <div className="bf-options">
                 {options[p].map((bf) => (
-                  <button key={bf} className={`chip ${choices[p] === bf ? `on p${p}` : ''}`} onClick={() => choose(p, bf)}>
-                    {bf}
-                  </button>
+                  <BattlefieldTile key={bf} name={bf} selected={choices[p] === bf} player={p} onClick={() => choose(p, bf)} />
                 ))}
               </div>
             )}

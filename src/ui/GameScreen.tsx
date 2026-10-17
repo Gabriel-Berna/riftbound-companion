@@ -3,7 +3,9 @@ import { conquerOutcome, runesToChannel, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
 import { DOMAINS, type Battlefield, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
 import type { AppAction, AppState } from '../store'
-import { Sheet, Stepper } from './common'
+import { findBattlefield } from '../data/battlefields'
+import { artStyle } from './battlefields'
+import { ScoreGems, Sheet, Stepper } from './common'
 import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
 
 type Panel =
@@ -104,11 +106,11 @@ function PlayerPanel(props: { game: GameState; player: PlayerIndex; flipped: boo
           <b>{p.points}</b>
           <small>/ {game.victoryScore}</small>
         </div>
-        <button className="score-btn" onClick={() => act({ type: 'adjustPoints', player, delta: 1 })} aria-label={`Dar 1 ponto a ${p.name} por efeito`}>
+        <button className="score-btn" onClick={() => act({ type: 'adjustPoints', player, delta: 1 })} aria-label={`Dar 1 ponto a ${p.name} por efeito`} title="Ponto por efeito de carta">
           +
         </button>
       </div>
-      <p className="score-hint">± pontos por efeito de carta</p>
+      <ScoreGems points={p.points} target={game.victoryScore} />
       <div className="res-row">
         <Stepper label="XP" value={p.xp} onChange={(delta) => act({ type: 'adjustXp', player, delta })} />
         <button className="pool-btn" onClick={props.openPool}>
@@ -124,7 +126,7 @@ function PlayerPanel(props: { game: GameState; player: PlayerIndex; flipped: boo
 function BattlefieldCard({ game, bf, onClick }: { game: GameState; bf: Battlefield; onClick: () => void }) {
   const ctrl = bf.controller
   return (
-    <button className={`bf ${ctrl === null ? 'free' : `ctrl${ctrl}`}`} onClick={onClick}>
+    <button className={`bf ${ctrl === null ? 'free' : `ctrl${ctrl}`} ${findBattlefield(bf.name) ? 'has-art' : ''}`} style={artStyle(bf.name)} onClick={onClick}>
       <span className="bf-name">{bf.name}</span>
       <span className="bf-ctrl">{ctrl === null ? 'Sem controle' : `Controle: ${game.players[ctrl].name}`}</span>
       <span className="bf-scored">
@@ -143,6 +145,7 @@ function BattlefieldCard({ game, bf, onClick }: { game: GameState; bf: Battlefie
 function BattlefieldSheet(props: { game: GameState; id: string; act: (a: GameAction) => void; onClose: () => void }) {
   const { game, act } = props
   const bf = game.battlefields.find((b) => b.id === props.id)!
+  const card = findBattlefield(bf.name)
   const done = (a: GameAction) => {
     act(a)
     props.onClose()
@@ -150,7 +153,15 @@ function BattlefieldSheet(props: { game: GameState; id: string; act: (a: GameAct
 
   return (
     <Sheet title={bf.name} onClose={props.onClose}>
-      <p className="hint">Battlefield de {game.players[bf.owner].name}.</p>
+      {card && (
+        <div className="bf-detail has-art" style={artStyle(bf.name, 800)}>
+          <p>{card.text}</p>
+        </div>
+      )}
+      <p className="hint">
+        Battlefield de {game.players[bf.owner].name}
+        {card && ` · ${card.setName}`}.
+      </p>
       <h3>Conquista</h3>
       <div className="actions">
         {([0, 1] as const)
@@ -275,6 +286,12 @@ function MenuSheet(props: { state: AppState; game: GameState; act: (a: GameActio
         {([0, 1] as const).map((p) => (
           <button key={p} className="action" onClick={close(() => confirm(`${game.players[p].name} concede o jogo?`) && act({ type: 'concede', player: p }))}>
             <b>{game.players[p].name} concede</b>
+          </button>
+        ))}
+        {([0, 1] as const).map((p) => (
+          <button key={`win${p}`} className="action" onClick={close(() => confirm(`${game.players[p].name} venceu por efeito de carta?`) && act({ type: 'winByEffect', player: p }))}>
+            <b>{game.players[p].name} venceu por efeito de carta</b>
+            <small>Ex.: The Grand Plaza, com 7 ou mais unidades.</small>
           </button>
         ))}
         <button className="action" onClick={close(() => confirm('Declarar o jogo empatado?') && act({ type: 'declareDraw' }))}>
