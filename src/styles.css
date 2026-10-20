@@ -98,11 +98,9 @@ h3 {
 /* Cantos chanfrados, no estilo hextech. */
 .primary,
 .secondary,
-.bf,
 .bf-tile,
 .bf-slot-empty,
 .picker-item,
-.turnstrip,
 .overlay-card {
   clip-path: polygon(
     var(--cut) 0,
@@ -154,17 +152,6 @@ h3 {
   text-decoration: underline;
   padding: 0.75rem;
   width: 100%;
-}
-
-.text-btn {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.3rem 0.55rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .icon-btn {
@@ -388,7 +375,6 @@ h3 {
 }
 
 /* Nos cartões pequenos, aproxima a ilustração e esconde a moldura da carta. */
-.bf.has-art,
 .bf-tile.has-art,
 .picker-item.has-art {
   background-size: 135%;
@@ -521,14 +507,9 @@ h3 {
   background: linear-gradient(180deg, rgba(20, 44, 54, 0.95), rgba(10, 24, 30, 0.95));
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 0.65rem 0.8rem;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 0.4rem;
-  transition:
-    border-color 0.25s,
-    box-shadow 0.25s;
+  min-height: 0;
 }
 
 .panel.flipped {
@@ -547,20 +528,237 @@ h3 {
   --pc-glow: var(--p1-glow);
 }
 
-.panel.active {
-  border-color: var(--pc);
-  background:
-    radial-gradient(ellipse 90% 70% at 50% 100%, var(--pc-soft), transparent 70%),
-    linear-gradient(180deg, rgba(20, 44, 54, 0.95), rgba(10, 24, 30, 0.95));
-  box-shadow:
-    0 0 0 1px var(--pc),
-    0 0 28px -6px var(--pc-glow);
-}
-
 .panel-head {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.5rem 0.4rem 0 0.8rem;
+}
+
+.panel-more {
+  margin-left: auto;
+  font-size: 1.3rem;
+  color: var(--cream);
+  background: rgba(6, 16, 20, 0.45);
+}
+
+.xp-chip {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(6, 16, 20, 0.6);
+  border: 1px solid var(--line);
+  color: var(--cream);
+}
+
+.xp-chip + .panel-more {
+  margin-left: 0;
+}
+
+/* As duas metades da lenda: Hold à esquerda, Conquer à direita. O placar fica por cima, sem receber toques. */
+.tap-zones {
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+}
+
+.tap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  padding: 0.6rem 0.8rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+
+.tap.conquer {
+  justify-content: flex-end;
+  border-left: 1px dashed rgba(249, 237, 220, 0.14);
+}
+
+.tap.hold:active {
+  background: radial-gradient(ellipse at 30% 70%, color-mix(in srgb, var(--pc-a) 35%, transparent), transparent 70%);
+}
+
+.tap.conquer:active {
+  background: radial-gradient(ellipse at 70% 70%, color-mix(in srgb, var(--pc-b) 45%, transparent), transparent 70%);
+}
+
+.tap-label {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream);
+  opacity: 0.7;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(6, 16, 20, 0.55);
+}
+
+.panel-score {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  pointer-events: none;
+}
+
+.panel-score .score b {
+  font-size: clamp(4rem, 22vw, 6rem);
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.8),
+    0 0 26px var(--pc-glow);
+}
+
+.panel-score .score small {
+  font-size: 1.2rem;
+  color: var(--cream);
+  opacity: 0.75;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+
+/* "+1" que sobe da metade tocada. */
+.tap-flash {
+  position: absolute;
+  bottom: 30%;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.8rem;
+  color: var(--cream);
+  text-shadow: 0 0 14px var(--pc-glow);
+  pointer-events: none;
+  opacity: 0;
+  animation: rise 0.9s ease-out;
+}
+
+.tap-flash.hold {
+  left: 18%;
+}
+
+.tap-flash.conquer {
+  right: 18%;
+  color: var(--orange-2);
+  font-size: 2.1rem;
+}
+
+@keyframes rise {
+  0% {
+    opacity: 1;
+    transform: translateY(20px) scale(0.8);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(1.15);
+  }
+}
+
+/* Faixa central: desfazer, relógio, battlefields, cartas e menu. */
+.center-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cb-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool {
+  flex: 0 0 44px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(15, 33, 41, 0.85);
+  border: 1px solid var(--line);
+  font-size: 1.15rem;
+  color: var(--cream);
+}
+
+.cb-mid {
+  flex: 1;
+  text-align: center;
+}
+
+.cb-target {
+  font-family: var(--display);
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.cb-bfs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cb-bf {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  min-height: 34px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background-color: var(--surface);
+  background-size: cover;
+  background-position: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--cream);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cb-bf::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(6, 16, 20, 0.55);
+}
+
+.cb-bf span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time-up {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--warn);
+  background: rgba(245, 165, 36, 0.1);
+  font-size: 0.85rem;
+  color: var(--cream);
+}
+
+.time-up b {
+  color: var(--warn);
+}
+
+.actions.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 }
 
 .panel-name {
@@ -572,29 +770,6 @@ h3 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.badge {
-  font-size: 0.68rem;
-  font-weight: 800;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--orange-2), var(--orange));
-  color: #1d0f00;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
-
-.panel-head .text-btn {
-  margin-left: auto;
-}
-
-.score-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
 }
 
 .score {
@@ -621,22 +796,6 @@ h3 {
   font-size: 1rem;
 }
 
-.score-btn {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 35%, var(--surface-3), var(--surface));
-  border: 1px solid var(--line);
-  font-size: 1.6rem;
-  line-height: 1;
-  color: var(--cream);
-}
-
-.score-btn:active:not(:disabled) {
-  border-color: var(--pc);
-  box-shadow: 0 0 12px var(--pc-glow);
-}
-
 .gems {
   display: flex;
   justify-content: center;
@@ -659,12 +818,6 @@ h3 {
   border-color: var(--pc);
   background: var(--pc);
   box-shadow: 0 0 8px var(--pc-glow);
-}
-
-.res-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: stretch;
 }
 
 .stepper {
@@ -716,136 +869,6 @@ h3 {
   background: var(--surface-3);
 }
 
-.pool-btn {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  background: rgba(6, 16, 20, 0.55);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.2rem 0.6rem;
-  font-weight: 800;
-  color: var(--cream);
-}
-
-.pool-btn small {
-  grid-column: 1 / -1;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-/* Centro: battlefields e turno */
-
-.center {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.toolbar {
-  display: flex;
-  gap: 6px;
-}
-
-.tool {
-  flex: 1;
-  padding: 0.45rem;
-  border-radius: 8px;
-  background: rgba(15, 33, 41, 0.85);
-  border: 1px solid var(--line);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.tool:last-child {
-  flex: 0 0 48px;
-  font-size: 1.1rem;
-}
-
-.battlefields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.bf {
-  position: relative;
-  isolation: isolate;
-  text-align: left;
-  padding: 0.55rem 0.7rem;
-  background-color: var(--surface);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 0.15rem;
-  min-height: 92px;
-}
-
-.bf.has-art::after {
-  background: linear-gradient(0deg, rgba(6, 16, 20, 0.95) 0%, rgba(6, 16, 20, 0.55) 60%, rgba(6, 16, 20, 0.2) 100%);
-}
-
-/* Moldura na cor de quem controla o battlefield. */
-.bf::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-
-.bf.ctrl0::before {
-  box-shadow:
-    inset 0 0 0 2px var(--p0),
-    inset 0 -18px 24px -12px var(--p0-glow);
-}
-
-.bf.ctrl1::before {
-  box-shadow:
-    inset 0 0 0 2px var(--p1),
-    inset 0 -18px 24px -12px var(--p1-glow);
-}
-
-.bf-name {
-  font-family: var(--display);
-  font-weight: 700;
-  color: var(--cream);
-  font-size: 0.95rem;
-  line-height: 1.15;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
-}
-
-.bf-ctrl {
-  font-size: 0.75rem;
-  color: var(--muted);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
-.bf.ctrl0 .bf-ctrl {
-  color: var(--p0);
-  font-weight: 700;
-}
-
-.bf.ctrl1 .bf-ctrl {
-  color: var(--p1);
-  font-weight: 700;
-}
-
-.bf-scored {
-  display: flex;
-  gap: 0.4rem;
-  font-size: 0.7rem;
-  font-weight: 700;
-  min-height: 1em;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
-}
-
 .bf-detail {
   position: relative;
   isolation: isolate;
@@ -866,59 +889,6 @@ h3 {
   font-size: 0.92rem;
   color: var(--cream);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
-}
-
-.turnstrip {
-  background: linear-gradient(180deg, rgba(20, 44, 54, 0.95), rgba(10, 24, 30, 0.95));
-  padding: 0.6rem 0.75rem 0.6rem 0.9rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  box-shadow: inset 3px 0 0 var(--pc, var(--line));
-}
-
-.turnstrip.p0 {
-  --pc: var(--p0);
-}
-
-.turnstrip.p1 {
-  --pc: var(--p1);
-}
-
-.turnstrip.flipped {
-  transform: rotate(180deg);
-}
-
-.turn-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.turn-head {
-  font-size: 0.95rem;
-}
-
-.turn-head b {
-  font-family: var(--display);
-}
-
-.turn-note {
-  font-size: 0.76rem;
-  color: var(--muted);
-}
-
-.turn-note.emph {
-  color: var(--orange-2);
-  font-weight: 700;
-}
-
-.next {
-  width: auto;
-  flex-shrink: 0;
-  padding: 0.8rem 1rem;
 }
 
 /* ---------- Painéis modais ---------- */
@@ -1082,12 +1052,6 @@ h3 {
   font-weight: 700;
 }
 
-.log-turn {
-  color: var(--muted);
-  font-size: 0.75rem;
-  margin-right: 0.3rem;
-}
-
 /* ---------- Avisos e fim de jogo ---------- */
 
 .toast {
@@ -1107,8 +1071,25 @@ h3 {
     0 12px 40px rgba(0, 0, 0, 0.6),
     0 0 24px -8px var(--gold-soft);
   z-index: 10;
-  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: left;
   animation: pop 0.2s ease-out;
+}
+
+.toast > span {
+  flex: 1;
+}
+
+.toast-undo {
+  flex-shrink: 0;
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(6, 16, 20, 0.6);
+  color: var(--orange-2);
+  font-weight: 700;
 }
 
 .toast.warn {
@@ -1166,82 +1147,6 @@ h3 {
   font-variant-numeric: tabular-nums;
 }
 
-/* Telas baixas: placar à esquerda e recursos à direita, para caber tudo sem rolar. */
-@media (max-height: 760px) {
-  .panel {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-areas:
-      'head head'
-      'score res'
-      'gems res';
-    align-items: center;
-    column-gap: 0.75rem;
-    row-gap: 0.25rem;
-  }
-
-  .panel-head {
-    grid-area: head;
-  }
-
-  .score-row {
-    grid-area: score;
-    gap: 0.4rem;
-  }
-
-  .gems {
-    grid-area: gems;
-    gap: 4px;
-  }
-
-  .gems i {
-    width: 8px;
-    height: 8px;
-  }
-
-  .score {
-    min-width: 3.6rem;
-  }
-
-  .score b {
-    font-size: 2.5rem;
-  }
-
-  .score-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 1.4rem;
-  }
-
-  .res-row {
-    grid-area: res;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-
-  .pool-btn {
-    padding: 0.35rem 0.6rem;
-  }
-
-  .pool-btn small {
-    display: none;
-  }
-
-  .step-btn {
-    width: 32px;
-    height: 32px;
-  }
-
-  .bf {
-    min-height: 70px;
-    padding: 0.45rem 0.6rem;
-  }
-
-  .tool {
-    padding: 0.35rem;
-  }
-}
-
 /* ---------- Lendas ---------- */
 
 .domains {
@@ -1277,15 +1182,17 @@ h3 {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-size: cover;
-  background-position: center 20%;
-  opacity: 0.22;
-  mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
+  opacity: 0.75;
 }
 
-.panel.active .panel-art {
-  opacity: 0.32;
+/* Escurece as bordas da arte para o nome, os rótulos e o placar ficarem legíveis. */
+.panel-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(6, 16, 20, 0.75) 0%, transparent 28%, transparent 62%, rgba(6, 16, 20, 0.8) 100%),
+    radial-gradient(ellipse 60% 45% at 50% 50%, rgba(6, 16, 20, 0.45), transparent 80%);
 }
 
 .panel-id {
@@ -1577,39 +1484,9 @@ h3 {
   }
 }
 
-/* Onda de cor que percorre o battlefield quando muda de dono. */
-.bf-wave {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: linear-gradient(100deg, transparent 20%, currentColor 50%, transparent 80%);
-  opacity: 0;
-  animation: wave 0.9s ease-out;
-}
-
-@keyframes wave {
-  0% {
-    opacity: 0.55;
-    transform: translateX(-100%);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-}
-
 /* Cores da lenda no painel do jogador. */
 .panel.with-legend {
   --pc-glow: color-mix(in srgb, var(--pc-a) 55%, transparent);
-}
-
-.panel.with-legend.active {
-  border-color: var(--pc-a);
-  box-shadow:
-    0 0 0 1px var(--pc-a),
-    0 0 30px -6px var(--pc-a),
-    inset 0 -30px 50px -30px var(--pc-b);
 }
 
 .panel.with-legend .gems i.on {
@@ -2328,8 +2205,8 @@ h3 {
 }
 
 .panel-art {
-  background-size: 165% auto;
-  background-position: center 6%;
+  background-size: 150% auto;
+  background-position: center 10%;
   background-repeat: no-repeat;
 }
 

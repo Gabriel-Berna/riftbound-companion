@@ -1,6 +1,6 @@
-import type { Domain, GameState, LogEntry, PowerKind } from '../engine/types'
+import type { Domain, GameState, LogEntry } from '../engine/types'
 
-export const POWER_LABELS: Record<PowerKind, string> = {
+export const POWER_LABELS: Record<Domain | 'universal', string> = {
   fury: 'Fury',
   calm: 'Calm',
   mind: 'Mind',
@@ -26,25 +26,17 @@ const name = (g: GameState, p: 0 | 1) => g.players[p].name
 export function describeLog(g: GameState, e: LogEntry): string {
   switch (e.kind) {
     case 'hold':
-      return `${name(g, e.player)} segurou ${e.battlefield}: +1 (${e.points})`
+      return `${name(g, e.player)} +1 por Hold (${e.points})`
     case 'conquer':
-      return `${name(g, e.player)} conquistou ${e.battlefield}: +1 (${e.points})`
+      return `${name(g, e.player)} +1 por Conquer (${e.points})`
     case 'final-point-blocked':
-      return `${name(g, e.player)} conquistou ${e.battlefield}, mas o ponto final foi barrado: compra 1 carta`
-    case 'already-scored':
-      return `${name(g, e.player)} conquistou ${e.battlefield} (já pontuado neste turno: sem ponto)`
-    case 'control':
-      return e.player === null
-        ? `${e.battlefield} ficou sem controle`
-        : `${e.battlefield} passou para ${name(g, e.player)} (sem pontuar)`
+      return `${name(g, e.player)} conquistou, mas o ponto final foi barrado: compra 1 carta`
     case 'points':
-      return `${name(g, e.player)} ${e.delta > 0 ? 'ganhou' : 'perdeu'} ${Math.abs(e.delta)} ponto${Math.abs(e.delta) > 1 ? 's' : ''} por efeito (${e.points})`
+      return `${name(g, e.player)} ${e.delta > 0 ? '+' : '−'}${Math.abs(e.delta)} por efeito ou correção (${e.points})`
     case 'burn-out':
       return `${name(g, e.player)} sofreu Burn Out: ${name(g, e.beneficiary)} +1 (${e.points})`
-    case 'turn-start':
-      return `Turno ${e.turn}: vez de ${name(g, e.player)}`
     case 'time-up':
-      return `Tempo esgotado: ${name(g, e.player)} termina o turno e vêm mais 3 turnos`
+      return 'Tempo esgotado: terminem o turno e joguem mais 3 turnos'
     case 'result':
       if (e.result.kind === 'draw') return 'Jogo empatado'
       if (e.result.reason === 'concede') return `${name(g, e.result.winner === 0 ? 1 : 0)} concedeu: ${name(g, e.result.winner)} vence`

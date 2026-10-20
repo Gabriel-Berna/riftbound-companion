@@ -4,7 +4,7 @@ import { LEGENDS } from '../data/cards'
 const SLIDES = [
   {
     title: 'O placar da mesa',
-    text: 'Toque num battlefield ao conquistar e em "Passar a vez" ao terminar o turno. O app faz o Hold, aplica a regra do Ponto Final e avisa quando alguém vence.',
+    text: 'Cada jogador tem metade da tela. Toque na metade esquerda da sua lenda para um ponto de Hold e na direita para um de Conquer. O app aplica a regra do Ponto Final e avisa quando alguém vence.',
     legend: 'Loose Cannon',
   },
   {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { conquerOutcome, createGame, extraTurn, gameReducer, runesToChannel, type GameAction } from './game'
+import { createGame, gameReducer, migrateGame, needsFinalPointCheck, type GameAction } from './game'
 import type { GameState } from './types'
 
 const newGame = (firstPlayer: 0 | 1 = 0) =>
@@ -7,7 +7,8 @@ const newGame = (firstPlayer: 0 | 1 = 0) =>
 
 const run = (s: GameState, ...actions: GameAction[]) => actions.reduce(gameReducer, s)
 
-const pass: GameAction = { type: 'passTurn' }
+const hold = (player: 0 | 1): GameAction => ({ type: 'score', player, kind: 'hold' })
+const conquer = (player: 0 | 1, scoredAllBattlefields?: boolean): GameAction => ({ type: 'score', player, kind: 'conquer', scoredAllBattlefields })
 
 const withPoints = (s: GameState, a: number, b: number): GameState => {
   const next = structuredClone(s)
@@ -16,206 +17,149 @@ const withPoints = (s: GameState, a: number, b: number): GameState => {
   return next
 }
 
-describe('estrutura do turno', () => {
-  it('passar a vez dá o turno ao oponente', () => {
-    let s = newGame(0)
-    expect(s.active).toBe(0)
-    s = run(s, pass)
-    expect(s.active).toBe(1)
-    expect(s.turn).toBe(2)
-    s = run(s, pass)
-    expect(s.active).toBe(0)
-    expect(s.turn).toBe(3)
+describe('Hold e Conquer (CR 471)', () => {
+  it('cada toque dá 1 ponto e fica no histórico com o tipo', () => {
+    const s = run(newGame(), hold(0), conquer(0), conquer(1))
+    expect(s.players.map((p) => p.points)).toEqual([2, 1])
+    expect(s.log.map((e) => e.kind)).toEqual(['hold', 'conquer', 'conquer'])
   })
 
-  it('quem joga em segundo canaliza 1 runa extra só no primeiro turno (CR 487.7)', () => {
-    let s = newGame(1)
-    expect(runesToChannel(s)).toBe(2) // Bruno começa: 2 runas
-    s = run(s, pass) // primeiro turno da Ana
-    expect(s.active).toBe(0)
-    expect(runesToChannel(s)).toBe(3)
-    s = run(s, pass, pass) // segundo turno da Ana
-    expect(runesToChannel(s)).toBe(2)
-  })
-
-  it('esvazia o rune pool de todos no fim do turno (CR 167)', () => {
-    let s = run(newGame(0), { type: 'adjustEnergy', player: 0, delta: 3 }, { type: 'adjustPower', player: 1, kind: 'fury', delta: 1 })
-    s = run(s, pass)
-    expect(s.players[0].energy).toBe(0)
-    expect(s.players[1].power.fury).toBe(0)
-  })
-
-  it('XP não é zerado entre turnos', () => {
-    const s = run(newGame(0), { type: 'adjustXp', player: 0, delta: 4 }, pass)
-    expect(s.players[0].xp).toBe(4)
-  })
-})
-
-describe('Hold (CR 471.2)', () => {
-  it('ao começar o turno, o jogador segura os battlefields que controla', () => {
-    let s = run(newGame(0), { type: 'setControl', battlefieldId: 'bf0', controller: 0 }, { type: 'setControl', battlefieldId: 'bf1', controller: 1 })
-    s = run(s, pass) // turno do Bruno
-    expect(s.players[1].points).toBe(1)
-    expect(s.players[0].points).toBe(0)
-    expect(s.scoredThisTurn[1]).toEqual(['bf1'])
-    s = run(s, pass) // turno da Ana
-    expect(s.players[0].points).toBe(1)
-  })
-
-  it('o battlefield segurado não pode ser pontuado de novo por Conquer no mesmo turno', () => {
-    let s = run(newGame(0), { type: 'setControl', battlefieldId: 'bf1', controller: 1 }, pass)
-    s = run(s, { type: 'conquer', player: 0, battlefieldId: 'bf1' }, { type: 'conquer', player: 1, battlefieldId: 'bf1' })
-    expect(s.players[1].points).toBe(1)
-    expect(s.log.at(-1)?.kind).toBe('already-scored')
-  })
-
-  it('Hold não sofre a restrição do Ponto Final (CR 473.1.a.1)', () => {
-    let s = withPoints(run(newGame(1), { type: 'setControl', battlefieldId: 'bf0', controller: 0 }), 7, 3)
-    s = run(s, pass)
-    expect(s.result).toEqual({ kind: 'win', winner: 0, reason: 'points' })
-  })
-})
-
-describe('Conquer (CR 471.1)', () => {
-  it('conquistar dá o controle e 1 ponto', () => {
-    const s = run(newGame(0), { type: 'conquer', player: 0, battlefieldId: 'bf1' })
-    expect(s.battlefields[1].controller).toBe(0)
-    expect(s.players[0].points).toBe(1)
-  })
-
-  it('cada battlefield pontua no máximo uma vez por turno (CR 472)', () => {
-    const s = run(
-      newGame(0),
-      { type: 'conquer', player: 0, battlefieldId: 'bf1' },
-      { type: 'conquer', player: 1, battlefieldId: 'bf1' },
-      { type: 'conquer', player: 0, battlefieldId: 'bf1' },
-    )
-    expect(s.players[0].points).toBe(1)
-    expect(s.players[1].points).toBe(1)
-    expect(s.battlefields[1].controller).toBe(0)
-    expect(s.log.at(-1)?.kind).toBe('already-scored')
-  })
-
-  it('o battlefield pode pontuar de novo no turno seguinte', () => {
-    let s = run(newGame(0), { type: 'conquer', player: 0, battlefieldId: 'bf1' }, pass)
-    s = run(s, { type: 'conquer', player: 1, battlefieldId: 'bf1' }, { type: 'conquer', player: 0, battlefieldId: 'bf1' })
-    expect(s.players[0].points).toBe(2)
+  it('XP é um recurso à parte e nunca fica negativo', () => {
+    const s = run(newGame(), { type: 'adjustXp', player: 0, delta: 3 }, { type: 'adjustXp', player: 1, delta: -1 })
+    expect(s.players.map((p) => p.xp)).toEqual([3, 0])
   })
 })
 
 describe('regra do Ponto Final (CR 473.1.b)', () => {
-  it('a 1 ponto da vitória, conquistar sem ter pontuado todos os battlefields não dá ponto', () => {
-    let s = withPoints(newGame(0), 7, 2)
-    expect(conquerOutcome(s, 0, 'bf1')).toBe('blocked')
-    s = run(s, { type: 'conquer', player: 0, battlefieldId: 'bf1' })
+  it('só se aplica a quem está a 1 ponto da vitória', () => {
+    expect(needsFinalPointCheck(withPoints(newGame(), 6, 7), 0)).toBe(false)
+    expect(needsFinalPointCheck(withPoints(newGame(), 6, 7), 1)).toBe(true)
+  })
+
+  it('Conquer sem ter pontuado todos os battlefields no turno não dá o ponto final', () => {
+    const s = run(withPoints(newGame(), 7, 2), conquer(0, false))
     expect(s.players[0].points).toBe(7)
-    expect(s.battlefields[1].controller).toBe(0)
     expect(s.result).toBeNull()
     expect(s.log.at(-1)?.kind).toBe('final-point-blocked')
   })
 
-  it('o Conquer barrado ainda conta como pontuado no turno', () => {
-    let s = withPoints(newGame(0), 7, 2)
-    s = run(s, { type: 'conquer', player: 0, battlefieldId: 'bf1' }, { type: 'conquer', player: 0, battlefieldId: 'bf1' })
-    expect(s.log.at(-1)?.kind).toBe('already-scored')
+  it('sem a resposta, o ponto final também é barrado', () => {
+    expect(run(withPoints(newGame(), 7, 2), conquer(0)).players[0].points).toBe(7)
   })
 
-  it('tendo pontuado o outro battlefield no turno, o Conquer dá o ponto final', () => {
-    let s = withPoints(run(newGame(1), { type: 'setControl', battlefieldId: 'bf0', controller: 0 }), 6, 2)
-    s = run(s, pass) // turno da Ana: Hold em bf0, 7 pontos
-    expect(s.players[0].points).toBe(7)
-    s = run(s, { type: 'conquer', player: 0, battlefieldId: 'bf1' })
-    expect(s.players[0].points).toBe(8)
+  it('tendo pontuado todos os battlefields no turno, o Conquer dá o ponto final', () => {
+    const s = run(withPoints(newGame(), 7, 2), conquer(0, true))
     expect(s.result).toEqual({ kind: 'win', winner: 0, reason: 'points' })
   })
 
-  it('pontos de efeito de carta e de Burn Out não sofrem a restrição', () => {
-    expect(run(withPoints(newGame(0), 7, 2), { type: 'adjustPoints', player: 0, delta: 1 }).result?.kind).toBe('win')
-    expect(run(withPoints(newGame(0), 7, 2), { type: 'burnOut', player: 1 }).result).toEqual({ kind: 'win', winner: 0, reason: 'points' })
+  it('Hold, efeitos de carta e Burn Out não sofrem a restrição (CR 473.1.a.1)', () => {
+    expect(run(withPoints(newGame(), 7, 2), hold(0)).result?.kind).toBe('win')
+    expect(run(withPoints(newGame(), 7, 2), { type: 'adjustPoints', player: 0, delta: 1 }).result?.kind).toBe('win')
+    expect(run(withPoints(newGame(), 7, 2), { type: 'burnOut', player: 1 }).result).toEqual({ kind: 'win', winner: 0, reason: 'points' })
   })
 })
 
 describe('vitória (CR 194.2)', () => {
   it('é preciso ter mais pontos que o oponente: empate em 8 continua', () => {
-    let s = withPoints(newGame(0), 7, 8)
-    s = run(s, { type: 'adjustPoints', player: 0, delta: 1 })
+    let s = run(withPoints(newGame(), 7, 8), hold(0))
     expect(s.result).toBeNull()
-    s = run(s, { type: 'adjustPoints', player: 0, delta: 1 })
+    s = run(s, hold(0))
     expect(s.result).toEqual({ kind: 'win', winner: 0, reason: 'points' })
   })
 
   it('pontos nunca ficam abaixo de 0 (CR 194.4)', () => {
-    const s = run(newGame(0), { type: 'adjustPoints', player: 0, delta: -1 })
+    const s = run(newGame(), { type: 'adjustPoints', player: 0, delta: -1 })
     expect(s.players[0].points).toBe(0)
-    expect(s.log.at(-1)?.kind).toBe('turn-start')
+    expect(s.log).toEqual([])
   })
 
   it('depois do resultado, novas ações são ignoradas', () => {
-    let s = run(newGame(0), { type: 'concede', player: 1 })
+    const s = run(newGame(), { type: 'concede', player: 1 })
     expect(s.result).toEqual({ kind: 'win', winner: 0, reason: 'concede' })
-    expect(run(s, { type: 'adjustPoints', player: 1, delta: 3 })).toBe(s)
+    expect(run(s, hold(1))).toBe(s)
   })
 })
 
 describe('battlefields que alteram a vitória', () => {
+  const climb = () => createGame({ playerNames: ['Ana', 'Bruno'], battlefieldNames: ["Aspirant's Climb", 'Zaun'], firstPlayer: 0 })
+
   it("Aspirant's Climb aumenta em 1 os pontos para vencer", () => {
-    const s = createGame({ playerNames: ['Ana', 'Bruno'], battlefieldNames: ["Aspirant's Climb", 'Zaun'], firstPlayer: 0 })
+    const s = climb()
     expect(s.victoryScore).toBe(9)
-    expect(run(withPoints(s, 8, 2), { type: 'adjustPoints', player: 0, delta: 0 }).result).toBeNull()
+    expect(run(withPoints(s, 7, 2), hold(0)).result).toBeNull()
   })
 
   it('a regra do Ponto Final usa o novo alvo', () => {
-    const s = withPoints(createGame({ playerNames: ['Ana', 'Bruno'], battlefieldNames: ["Aspirant's Climb", 'Zaun'], firstPlayer: 0 }), 7, 2)
-    expect(conquerOutcome(s, 0, 'bf1')).toBe('point')
-    expect(conquerOutcome(withPoints(s, 8, 2), 0, 'bf1')).toBe('blocked')
+    expect(needsFinalPointCheck(withPoints(climb(), 7, 2), 0)).toBe(false)
+    expect(needsFinalPointCheck(withPoints(climb(), 8, 2), 0)).toBe(true)
   })
 
   it('vitória por efeito de carta encerra o jogo', () => {
-    expect(run(newGame(0), { type: 'winByEffect', player: 1 }).result).toEqual({ kind: 'win', winner: 1, reason: 'effect' })
+    expect(run(newGame(), { type: 'winByEffect', player: 1 }).result).toEqual({ kind: 'win', winner: 1, reason: 'effect' })
   })
 })
 
 describe('tempo da rodada (TR 408.2)', () => {
-  it('o jogador da vez termina o turno e vêm mais 3 turnos', () => {
-    let s = run(newGame(0), pass) // turno 2
-    s = run(s, { type: 'timeUp' })
-    expect(extraTurn(s)).toBe(0)
-    s = run(s, pass, pass)
-    expect(extraTurn(s)).toBe(2)
-    expect(s.result).toBeNull()
-    s = run(s, pass) // turno extra 3
-    expect(extraTurn(s)).toBe(3)
+  it('o fim do tempo é registrado uma vez e o jogo continua nos turnos extras', () => {
+    const s = run(newGame(), { type: 'timeUp' }, hold(0), { type: 'timeUp' })
+    expect(s.timeUp).toBe(true)
+    expect(s.log.filter((e) => e.kind === 'time-up')).toHaveLength(1)
     expect(s.result).toBeNull()
   })
 
   it('ao fim dos turnos extras, vence quem tem 2+ pontos de vantagem', () => {
-    let s = withPoints(run(newGame(0), { type: 'timeUp' }), 5, 3)
-    s = run(s, pass, pass, pass, pass)
+    const s = run(withPoints(run(newGame(), { type: 'timeUp' }), 5, 3), { type: 'endByTime' })
     expect(s.result).toEqual({ kind: 'win', winner: 0, reason: 'time' })
   })
 
   it('com menos de 2 pontos de vantagem, o jogo empata', () => {
-    let s = withPoints(run(newGame(0), { type: 'timeUp' }), 5, 4)
-    s = run(s, pass, pass, pass, pass)
+    const s = run(withPoints(run(newGame(), { type: 'timeUp' }), 5, 4), { type: 'endByTime' })
     expect(s.result).toEqual({ kind: 'draw' })
   })
 
   it('o jogo ainda pode terminar normalmente durante os turnos extras', () => {
-    let s = withPoints(run(newGame(0), { type: 'timeUp' }, pass), 4, 7)
-    s = run(s, { type: 'adjustPoints', player: 1, delta: 1 })
+    const s = run(withPoints(run(newGame(), { type: 'timeUp' }), 4, 7), hold(1))
     expect(s.result).toEqual({ kind: 'win', winner: 1, reason: 'points' })
-  })
-
-  it('o fim do tempo só conta uma vez', () => {
-    let s = run(newGame(0), { type: 'timeUp' }, pass, { type: 'timeUp' })
-    expect(s.timeUpTurn).toBe(1)
   })
 })
 
 describe('Burn Out (CR 432)', () => {
   it('o oponente de quem sofreu Burn Out ganha 1 ponto', () => {
-    const s = run(newGame(0), { type: 'burnOut', player: 0 })
-    expect(s.players[1].points).toBe(1)
-    expect(s.players[0].points).toBe(0)
+    const s = run(newGame(), { type: 'burnOut', player: 0 })
+    expect(s.players.map((p) => p.points)).toEqual([0, 1])
+  })
+})
+
+describe('jogo salvo pela versão com turnos', () => {
+  it('converte battlefields e histórico e mantém o placar', () => {
+    const legacy = {
+      victoryScore: 8,
+      players: [
+        { name: 'Ana', points: 3, xp: 1, energy: 2, power: {} },
+        { name: 'Bruno', points: 2, xp: 0, energy: 0, power: {} },
+      ],
+      battlefields: [
+        { id: 'bf0', name: 'Targon', owner: 0, controller: 0 },
+        { id: 'bf1', name: 'Zaun', owner: 1, controller: null },
+      ],
+      firstPlayer: 1,
+      turn: 4,
+      active: 0,
+      log: [
+        { kind: 'turn-start', turn: 1, player: 1 },
+        { kind: 'conquer', turn: 1, player: 1, battlefield: 'Targon', points: 1 },
+      ],
+      result: null,
+      timeUpTurn: 3,
+    }
+    const g = migrateGame(legacy)!
+    expect(g.battlefields).toEqual(['Targon', 'Zaun'])
+    expect(g.players).toEqual([
+      { name: 'Ana', points: 3, xp: 1 },
+      { name: 'Bruno', points: 2, xp: 0 },
+    ])
+    expect(g.log.map((e) => e.kind)).toEqual(['conquer'])
+    expect(g.timeUp).toBe(true)
+    expect(run(g, hold(0)).players[0].points).toBe(4)
   })
 })

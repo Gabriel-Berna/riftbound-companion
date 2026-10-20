@@ -14,18 +14,17 @@ App de celular (PWA) de apoio para partidas do TCG físico **Riftbound** (Riot G
 - **Compartilhar resultado**: imagem com as artes das lendas e o placar, pelo menu de compartilhar do celular.
 - **Regras rápidas**: resumo pesquisável do Core Rules e do Tournament Rules e glossário de palavras-chave, também durante a partida.
 
-- **Placar por battlefield**: registra Hold e Conquer, impede pontuar o mesmo battlefield duas vezes no turno e aplica a **regra do Ponto Final** (CR 473.1.b).
-- **Um toque por turno**: o botão "Passar a vez" faz o Hold automático dos battlefields do novo jogador, esvazia o rune pool e lembra da runa extra de quem joga em segundo.
-- **Recursos**: XP e rune pool (Energy e Power por domínio), que esvazia sozinho nos momentos certos.
-- **Burn Out**, pontos por efeito de carta, concessão e empate.
-- **Histórico** do jogo e **desfazer**.
+- **Placar de um toque**: cada jogador tem metade da tela com a arte da sua lenda. Tocar na metade esquerda registra um ponto de **Hold**; na direita, de **Conquer**, com som, vibração e animação diferentes. O app não acompanha turnos: o celular só é tocado quando alguém pontua.
+- **Regra do Ponto Final** (CR 473.1.b): num Conquer a 1 ponto da vitória, o app pergunta se o jogador já pontuou todos os battlefields no turno; se não, o ponto é barrado (compra 1 carta).
+- **Ajustes de cada jogador** (⋯ no canto da lenda): −1 ponto para corrigir, +1 por efeito de carta, XP, Burn Out, vitória por efeito e concessão. Empate e abandono ficam no menu.
+- **Histórico** do jogo e **desfazer**, também direto no aviso que aparece a cada ponto.
 - **Melhor de 3** e **jogo único**: battlefields usados saem da partida, quem perdeu escolhe quem começa.
 - **Biblioteca de cartas**: as 1.103 cartas da galeria oficial, com busca por nome, texto ou tag, filtros por tipo, domínio e set, detalhes com custos, Might, artes alternativas e palavras-chave explicadas em português. Abre também durante a partida.
 - **Visual de jogo**: tela de VS com as artes das lendas antes de cada jogo, tela de vitória com a arte da lenda vencedora e partículas, moeda animada no sorteio, animações ao pontuar e ao conquistar, brilho do painel nas cores dos domínios da lenda.
 - **Preferências** (menu da partida): sons sintetizados (desligados por padrão), vibração ao pontuar e tela sempre ligada durante a partida.
 - **Estatísticas**: cada partida encerrada é salva no aparelho (você é sempre o Jogador 1). % de vitória por partida, por jogo, começando ou em segundo, por lenda sua, por lenda do oponente, por oponente e por battlefield, com filtro pela sua lenda, gráfico da evolução da % de vitórias e mapa de confrontos (suas lendas × lendas dos oponentes). Registro manual de partidas jogadas sem o app e backup em arquivo (exportar/importar).
-- **Lendas** de cada jogador, com busca por campeão, título ou domínio: arte no painel do jogador e rune pool só com os domínios da lenda.
-- **Banco de battlefields** da galeria oficial: busca por nome com a arte de cada um, habilidade visível durante o jogo e regras especiais (ex.: Aspirant's Climb aumenta o alvo para 9 pontos).
+- **Lendas** de cada jogador, com busca por campeão, título ou domínio: a arte da lenda ocupa o placar do jogador.
+- **Banco de battlefields** da galeria oficial: busca por nome com a arte de cada um, habilidade consultável durante o jogo e regras especiais (ex.: Aspirant's Climb aumenta o alvo para 9 pontos).
 - Painel do oponente girado para jogar frente a frente, e funciona offline.
 
 ## Desenvolvimento

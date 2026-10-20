@@ -94,7 +94,7 @@ describe('relógio da rodada (TR 408)', () => {
 
   it('tempo esgotado durante o jogo inicia os turnos extras', () => {
     const m = run(timed(), { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0, now: 0 }, { type: 'timeUp' })
-    expect(m.game?.timeUpTurn).toBe(1)
+    expect(m.game?.timeUp).toBe(true)
     expect(isMatchOver(m)).toBe(false)
   })
 

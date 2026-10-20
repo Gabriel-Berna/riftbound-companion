@@ -17,4 +17,4 @@ PWA (React + TypeScript + Vite) de apoio a partidas do TCG Riftbound. Interface 
 - Regras oficiais: `docs/regras-riftbound.md` (resumo) e `docs/fontes/` (textos completos, pesquisáveis com grep).
 - Comandos: `npm test`, `npm run build` (inclui `tsc -b`).
 - Nos testes, loops que passam turnos precisam parar quando o jogo termina (`state.result`), senão o Vitest trava sem mensagem.
-- Interação mínima durante a partida: o jogador quer olhar para as cartas, não para o celular. O turno avança com um único toque (`passTurn`); não reintroduzir passo a passo de fases.
+- Interação mínima durante a partida: o jogador quer olhar para as cartas, não para o celular. A tela de jogo é só placar: um toque na metade esquerda da lenda = ponto de Hold, na direita = Conquer (`score`). O app não acompanha turnos, fases, controle de battlefields nem rune pool; não reintroduzir. A única pergunta durante o jogo é a do Ponto Final (CR 473.1.b).

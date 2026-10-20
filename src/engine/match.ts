@@ -151,7 +151,7 @@ export function matchReducer(m: MatchState, a: MatchAction): MatchState {
     case 'finishGame': {
       const g = m.game
       if (!g?.result) return m
-      const battlefields: [string, string] = [g.battlefields[0].name, g.battlefields[1].name]
+      const battlefields = g.battlefields
       // Battlefields de um jogo com vencedor saem da partida; após empate, podem voltar (CR 488.5–488.5.a).
       const removed: [string[], string[]] =
         g.result.kind === 'win'

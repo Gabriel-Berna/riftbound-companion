@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
-import type { GameState, LogEntry } from '../engine/types'
+import type { GameState } from '../engine/types'
 import type { Settings } from '../store'
 
-type Sound = 'point' | 'warn' | 'turn' | 'victory' | 'coin'
+type Sound = 'hold' | 'conquer' | 'warn' | 'victory' | 'coin'
 
 let audio: AudioContext | null = null
 
@@ -26,16 +26,17 @@ export function playSound(sound: Sound): void {
     if (audio.state === 'suspended') void audio.resume()
     const t = audio.currentTime
     switch (sound) {
-      case 'point': // arpejo curto e brilhante, estilo hextech
-        tone(audio, 880, t, 0.25, 'triangle')
-        tone(audio, 1320, t + 0.07, 0.35, 'triangle')
+      case 'hold': // nota única e suave
+        tone(audio, 880, t, 0.3, 'triangle')
+        break
+      case 'conquer': // arpejo curto e brilhante, estilo hextech
+        tone(audio, 660, t, 0.18, 'triangle')
+        tone(audio, 990, t + 0.06, 0.22, 'triangle')
+        tone(audio, 1320, t + 0.12, 0.35, 'triangle')
         break
       case 'warn':
         tone(audio, 330, t, 0.2, 'square', 0.08)
         tone(audio, 262, t + 0.15, 0.3, 'square', 0.08)
-        break
-      case 'turn':
-        tone(audio, 523, t, 0.12, 'sine', 0.1)
         break
       case 'coin':
         tone(audio, 1568, t, 0.08, 'square', 0.05)
@@ -59,9 +60,7 @@ export function vibrate(pattern: number | number[]): void {
   }
 }
 
-const POINT_KINDS: LogEntry['kind'][] = ['hold', 'conquer', 'burn-out']
-
-/** Sons e vibração para o que acabou de acontecer no jogo. */
+/** Sons e vibração para o que acabou de acontecer no jogo: Hold e Conquer soam e vibram diferente. */
 export function useGameFeedback(game: GameState, settings: Settings): void {
   const seen = useRef(game.log.length)
   useEffect(() => {
@@ -69,18 +68,19 @@ export function useGameFeedback(game: GameState, settings: Settings): void {
     seen.current = game.log.length
     if (fresh.length === 0) return
     const kinds = fresh.map((e) => e.kind)
-    const gained = fresh.some((e) => POINT_KINDS.includes(e.kind) || (e.kind === 'points' && e.delta > 0))
+    const gained = fresh.some((e) => e.kind === 'hold' || e.kind === 'burn-out' || (e.kind === 'points' && e.delta > 0))
     if (kinds.includes('result')) {
       if (settings.sound) playSound('victory')
       if (settings.vibration) vibrate([80, 60, 80, 60, 200])
-    } else if (kinds.includes('final-point-blocked') || kinds.includes('already-scored') || kinds.includes('time-up')) {
+    } else if (kinds.includes('final-point-blocked') || kinds.includes('time-up')) {
       if (settings.sound) playSound('warn')
       if (settings.vibration) vibrate([30, 60, 30])
+    } else if (kinds.includes('conquer')) {
+      if (settings.sound) playSound('conquer')
+      if (settings.vibration) vibrate([25, 40, 25])
     } else if (gained) {
-      if (settings.sound) playSound('point')
+      if (settings.sound) playSound('hold')
       if (settings.vibration) vibrate(35)
-    } else if (kinds.includes('turn-start')) {
-      if (settings.sound) playSound('turn')
     }
   }, [game, settings])
 }

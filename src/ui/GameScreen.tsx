@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { conquerOutcome, extraTurn, EXTRA_TURNS, runesToChannel, type GameAction } from '../engine/game'
+import { EXTRA_TURNS, needsFinalPointCheck, type GameAction } from '../engine/game'
 import { gameWins, isMatchOver, matchReducer, matchWinner, type MatchState } from '../engine/match'
-import { DOMAINS, type Battlefield, type Domain, type GameState, type PlayerIndex, type PowerKind } from '../engine/types'
+import type { GameState, PlayerIndex, ScoreKind } from '../engine/types'
 import type { AppAction, AppState } from '../store'
 import { findBattlefield, findLegend } from '../data/cards'
 import { battlefieldArt, DomainIcons, legendArt } from './cards'
@@ -12,11 +12,12 @@ import { RulesScreen } from './RulesScreen'
 import { SettingsToggles } from './SettingsScreen'
 import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
 import { RoundClock } from './timer'
-import { DOMAIN_COLORS, POWER_LABELS, describeLog } from './text'
+import { describeLog } from './text'
 
 type Panel =
-  | { kind: 'battlefield'; id: string }
-  | { kind: 'pool'; player: PlayerIndex }
+  | { kind: 'final-point'; player: PlayerIndex }
+  | { kind: 'player'; player: PlayerIndex }
+  | { kind: 'battlefield'; name: string }
   | { kind: 'log' }
   | { kind: 'menu' }
   | { kind: 'library' }
@@ -30,59 +31,76 @@ interface Props {
   dispatch: (a: AppAction) => void
 }
 
+/**
+ * Placar da partida. Cada metade é de um jogador: um toque na metade esquerda da lenda registra um ponto
+ * de Hold; na direita, de Conquer. O app não acompanha turnos: o jogador olha para as cartas, não para o celular.
+ */
 export function GameScreen({ state, match, game, dispatch }: Props) {
   const [panel, setPanel] = useState<Panel>(null)
   // A tela de VS aparece só quando o jogo acabou de começar.
-  const [intro, setIntro] = useState(() => game.log.length === 1 && !game.result)
+  const [intro, setIntro] = useState(() => game.log.length === 0 && !game.result)
   const closeIntro = useCallback(() => setIntro(false), [])
   const act = (action: GameAction) => dispatch({ type: 'match', action: { type: 'game', action } })
   const flipped = (p: PlayerIndex) => state.tableMode && p === 1
   useGameFeedback(game, state.settings)
   useWakeLock(state.settings.keepAwake)
 
+  const score = (player: PlayerIndex, kind: ScoreKind) => {
+    // A 1 ponto da vitória, o Conquer depende da regra do Ponto Final: pergunta antes de pontuar.
+    if (kind === 'conquer' && needsFinalPointCheck(game, player)) setPanel({ kind: 'final-point', player })
+    else act({ type: 'score', player, kind })
+  }
+  const close = () => setPanel(null)
+  const playerPanel = (p: PlayerIndex) => (
+    <PlayerPanel
+      game={game}
+      legend={match.players[p].legend}
+      legendArt={match.players[p].legendArt}
+      player={p}
+      flipped={flipped(p)}
+      onScore={(kind) => score(p, kind)}
+      onOptions={() => setPanel({ kind: 'player', player: p })}
+    />
+  )
+
   return (
     <main className="game">
-      <PlayerPanel game={game} legend={match.players[1].legend} legendArt={match.players[1].legendArt} player={1} flipped={flipped(1)} act={act} openPool={() => setPanel({ kind: 'pool', player: 1 })} />
+      {playerPanel(1)}
+      <CenterBar
+        match={match}
+        game={game}
+        canUndo={state.history.length > 0}
+        onUndo={() => dispatch({ type: 'undo' })}
+        onBattlefield={(name) => setPanel({ kind: 'battlefield', name })}
+        onLibrary={() => setPanel({ kind: 'library' })}
+        onMenu={() => setPanel({ kind: 'menu' })}
+        onEndByTime={() => confirm('Os 3 turnos extras acabaram? Vence quem tiver 2 ou mais pontos de vantagem; senão, empate.') && act({ type: 'endByTime' })}
+      />
+      {playerPanel(0)}
 
-      <section className="center">
-        <div className="toolbar">
-          <button className="tool" onClick={() => dispatch({ type: 'undo' })} disabled={state.history.length === 0}>
-            ↶ Desfazer
-          </button>
-          <button className="tool" onClick={() => setPanel({ kind: 'log' })}>
-            Histórico
-          </button>
-          <button className="tool" onClick={() => setPanel({ kind: 'library' })}>
-            Cartas
-          </button>
-          <button className="tool" onClick={() => setPanel({ kind: 'menu' })} aria-label="Menu">
-            ⋯
-          </button>
-        </div>
-        <div className="battlefields">
-          {game.battlefields.map((bf) => (
-            <BattlefieldCard key={bf.id} game={game} bf={bf} onClick={() => setPanel({ kind: 'battlefield', id: bf.id })} />
-          ))}
-        </div>
-        <TurnStrip match={match} game={game} flipped={flipped(game.active)} act={act} />
-      </section>
+      <Toast game={game} onUndo={() => dispatch({ type: 'undo' })} />
 
-      <PlayerPanel game={game} legend={match.players[0].legend} legendArt={match.players[0].legendArt} player={0} flipped={false} act={act} openPool={() => setPanel({ kind: 'pool', player: 0 })} />
-
-      <Toast game={game} />
-
-      {panel?.kind === 'battlefield' && (
-        <BattlefieldSheet game={game} id={panel.id} act={act} onClose={() => setPanel(null)} />
+      {panel?.kind === 'final-point' && (
+        <FinalPointSheet
+          game={game}
+          player={panel.player}
+          flipped={flipped(panel.player)}
+          onAnswer={(scoredAllBattlefields) => {
+            act({ type: 'score', player: panel.player, kind: 'conquer', scoredAllBattlefields })
+            close()
+          }}
+          onClose={close}
+        />
       )}
-      {panel?.kind === 'pool' && (
-        <PoolSheet game={game} legend={match.players[panel.player].legend} player={panel.player} flipped={flipped(panel.player)} act={act} onClose={() => setPanel(null)} />
-      )}
+      {panel?.kind === 'player' && <PlayerSheet game={game} player={panel.player} flipped={flipped(panel.player)} act={act} onClose={close} />}
+      {panel?.kind === 'battlefield' && <BattlefieldSheet name={panel.name} onClose={close} />}
       {panel?.kind === 'log' && (
-        <Sheet title="Histórico do jogo" onClose={() => setPanel(null)}>
+        <Sheet title="Histórico do jogo" onClose={close}>
+          {game.log.length === 0 && <p className="hint">Nenhum ponto ainda.</p>}
           <ol className="log">
             {[...game.log].reverse().map((e, i) => (
               <li key={i} className={`log-${e.kind}`}>
-                <span className="log-turn">T{e.turn}</span> {describeLog(game, e)}
+                {describeLog(game, e)}
               </li>
             ))}
           </ol>
@@ -95,12 +113,13 @@ export function GameScreen({ state, match, game, dispatch }: Props) {
           game={game}
           act={act}
           dispatch={dispatch}
+          onLog={() => setPanel({ kind: 'log' })}
           onRules={() => setPanel({ kind: 'rules' })}
-          onClose={() => setPanel(null)}
+          onClose={close}
         />
       )}
-      {panel?.kind === 'library' && <LibraryScreen overlay onClose={() => setPanel(null)} />}
-      {panel?.kind === 'rules' && <RulesScreen overlay onClose={() => setPanel(null)} />}
+      {panel?.kind === 'library' && <LibraryScreen overlay onClose={close} />}
+      {panel?.kind === 'rules' && <RulesScreen overlay onClose={close} />}
       {game.result && <GameOver match={match} game={game} dispatch={dispatch} />}
       {intro && <VersusIntro match={match} game={game} onDone={closeIntro} />}
     </main>
@@ -113,25 +132,25 @@ function PlayerPanel(props: {
   legendArt: string | undefined
   player: PlayerIndex
   flipped: boolean
-  act: (a: GameAction) => void
-  openPool: () => void
+  onScore: (kind: ScoreKind) => void
+  onOptions: () => void
 }) {
-  const { game, player, act } = props
+  const { game, player } = props
   const p = game.players[player]
   const legend = findLegend(props.legend)
-  const isActive = game.active === player
-  const power = Object.values(p.power).reduce((a, b) => a + b, 0)
-  // Com lenda, o brilho do painel usa as cores dos domínios dela.
   const [accentA, accentB] = accentColors(legend, player)
+  // O último ponto deste jogador sobe da metade tocada; a key reinicia a animação a cada ponto.
+  const last = game.log.at(-1)
+  const flash = last && (last.kind === 'hold' || last.kind === 'conquer') && last.player === player ? last.kind : null
 
   return (
     <section
-      className={`panel p${player} ${isActive ? 'active' : ''} ${props.flipped ? 'flipped' : ''} ${legend ? 'with-legend' : ''}`}
-      style={legend ? ({ '--pc-a': accentA, '--pc-b': accentB } as CSSProperties) : undefined}
-      aria-label={`Painel de ${p.name}`}
+      className={`panel p${player} ${props.flipped ? 'flipped' : ''} ${legend ? 'with-legend' : ''}`}
+      style={{ '--pc-a': accentA, '--pc-b': accentB } as CSSProperties}
+      aria-label={`Placar de ${p.name}`}
     >
-      {legend && <div className="panel-art" style={legendArt(legend.name, 640, props.legendArt)} aria-hidden="true" />}
-      <div className="panel-head">
+      {legend && <div className="panel-art" style={legendArt(legend.name, 720, props.legendArt)} aria-hidden="true" />}
+      <header className="panel-head">
         <span className="panel-id">
           <span className="panel-name">{p.name}</span>
           {legend && (
@@ -140,224 +159,229 @@ function PlayerPanel(props: {
             </span>
           )}
         </span>
-        {isActive && <span className="badge">Vez de jogar</span>}
-        <button
-          className="text-btn"
-          onClick={() => confirm(`${p.name} sofreu Burn Out? O oponente ganha 1 ponto.`) && act({ type: 'burnOut', player })}
-        >
-          Burn Out
+        {p.xp > 0 && <span className="xp-chip">XP {p.xp}</span>}
+        <button className="icon-btn panel-more" onClick={props.onOptions} aria-label={`Opções de ${p.name}`}>
+          ⋯
         </button>
-      </div>
-      <div className="score-row">
-        <button className="score-btn" onClick={() => act({ type: 'adjustPoints', player, delta: -1 })} disabled={p.points === 0} aria-label={`Tirar 1 ponto de ${p.name}`}>
-          −
+      </header>
+      <div className="tap-zones">
+        <button className="tap hold" onClick={() => props.onScore('hold')} aria-label={`Hold: +1 ponto para ${p.name}`}>
+          <span className="tap-label">⚑ Hold</span>
         </button>
-        <div className="score" aria-live="polite">
-          {/* A key reinicia a animação a cada mudança de pontos. */}
-          <b key={p.points} className="bump">
-            {p.points}
-          </b>
-          <small>/ {game.victoryScore}</small>
+        <button className="tap conquer" onClick={() => props.onScore('conquer')} aria-label={`Conquer: +1 ponto para ${p.name}`}>
+          <span className="tap-label">⚔ Conquer</span>
+        </button>
+        <div className="panel-score" aria-live="polite">
+          <div className="score">
+            <b key={p.points} className="bump">
+              {p.points}
+            </b>
+            <small>/ {game.victoryScore}</small>
+          </div>
+          <ScoreGems points={p.points} target={game.victoryScore} />
         </div>
-        <button className="score-btn" onClick={() => act({ type: 'adjustPoints', player, delta: 1 })} aria-label={`Dar 1 ponto a ${p.name} por efeito`} title="Ponto por efeito de carta">
-          +
-        </button>
-      </div>
-      <ScoreGems points={p.points} target={game.victoryScore} />
-      <div className="res-row">
-        <Stepper label="XP" value={p.xp} onChange={(delta) => act({ type: 'adjustXp', player, delta })} />
-        <button className="pool-btn" onClick={props.openPool}>
-          <span>⚡ {p.energy}</span>
-          <span>◆ {power}</span>
-          <small>Rune pool</small>
-        </button>
+        {flash && (
+          <span key={game.log.length} className={`tap-flash ${flash}`} aria-hidden="true">
+            +1 {flash === 'hold' ? '⚑' : '⚔'}
+          </span>
+        )}
       </div>
     </section>
   )
 }
 
-function BattlefieldCard({ game, bf, onClick }: { game: GameState; bf: Battlefield; onClick: () => void }) {
-  const ctrl = bf.controller
+/** Faixa central: desfazer, relógio, battlefields do jogo, cartas e menu. */
+function CenterBar(props: {
+  match: MatchState
+  game: GameState
+  canUndo: boolean
+  onUndo: () => void
+  onBattlefield: (name: string) => void
+  onLibrary: () => void
+  onMenu: () => void
+  onEndByTime: () => void
+}) {
+  const { match, game } = props
+  // Só os battlefields reais do banco de cartas (nomes provisórios como "Battlefield A1" ficam de fora).
+  const battlefields = game.battlefields.filter((name) => findBattlefield(name))
   return (
-    <button className={`bf ${ctrl === null ? 'free' : `ctrl${ctrl}`} ${findBattlefield(bf.name) ? 'has-art' : ''}`} style={battlefieldArt(bf.name)} onClick={onClick}>
-      {ctrl !== null && <span key={`wave${ctrl}`} className={`bf-wave c${ctrl}`} aria-hidden="true" />}
-      <span className="bf-name">{bf.name}</span>
-      <span className="bf-ctrl">{ctrl === null ? 'Sem controle' : `Controle: ${game.players[ctrl].name}`}</span>
-      <span className="bf-scored">
-        {([0, 1] as const).map((p) =>
-          game.scoredThisTurn[p].includes(bf.id) ? (
-            <span key={p} className={`scored c${p}`}>
-              ✓ {game.players[p].name}
-            </span>
-          ) : null,
-        )}
-      </span>
-    </button>
+    <section className="center-bar">
+      <div className="cb-row">
+        <button className="tool" onClick={props.onUndo} disabled={!props.canUndo} aria-label="Desfazer">
+          ↶
+        </button>
+        <div className="cb-mid">
+          {match.timer && !game.timeUp ? <RoundClock match={match} /> : <span className="cb-target">Vence com {game.victoryScore}</span>}
+        </div>
+        <button className="tool" onClick={props.onLibrary} aria-label="Cartas">
+          🃏
+        </button>
+        <button className="tool" onClick={props.onMenu} aria-label="Menu">
+          ⋯
+        </button>
+      </div>
+      {battlefields.length > 0 && (
+        <div className="cb-bfs">
+          {battlefields.map((name, i) => (
+            <button key={i} className="cb-bf has-art" style={battlefieldArt(name, 360)} onClick={() => props.onBattlefield(name)}>
+              <span>{name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {game.timeUp && (
+        <div className="time-up">
+          <span>
+            ⏱ <b>Tempo esgotado.</b> Terminem o turno e joguem mais {EXTRA_TURNS} turnos.
+          </span>
+          <button className="secondary" onClick={props.onEndByTime}>
+            Fim dos turnos extras
+          </button>
+        </div>
+      )}
+    </section>
   )
 }
 
-function BattlefieldSheet(props: { game: GameState; id: string; act: (a: GameAction) => void; onClose: () => void }) {
-  const { game, act } = props
-  const bf = game.battlefields.find((b) => b.id === props.id)!
-  const card = findBattlefield(bf.name)
+/** Regra do Ponto Final (CR 473.1.b): a 1 ponto da vitória, o Conquer só pontua com todos os battlefields já pontuados no turno. */
+function FinalPointSheet(props: { game: GameState; player: PlayerIndex; flipped: boolean; onAnswer: (scoredAll: boolean) => void; onClose: () => void }) {
+  const name = props.game.players[props.player].name
+  return (
+    <Sheet title="Ponto final" flipped={props.flipped} onClose={props.onClose}>
+      <p>
+        {name} está a 1 ponto da vitória. Pelo Conquer, o ponto só vale se {name} já pontuou <b>todos os battlefields</b> neste turno.
+      </p>
+      <button className="primary big" onClick={() => props.onAnswer(true)}>
+        Pontuou todos: vale o ponto
+      </button>
+      <button className="secondary" onClick={() => props.onAnswer(false)}>
+        Não pontuou: compra 1 carta
+      </button>
+      <p className="hint">Hold e pontos de efeitos de cartas não têm essa restrição.</p>
+    </Sheet>
+  )
+}
+
+/** Ajustes de um jogador: correções, efeitos de cartas, Burn Out, XP e fim do jogo. */
+function PlayerSheet(props: { game: GameState; player: PlayerIndex; flipped: boolean; act: (a: GameAction) => void; onClose: () => void }) {
+  const { game, player, act } = props
+  const p = game.players[player]
+  const opponent = game.players[player === 0 ? 1 : 0].name
   const done = (a: GameAction) => {
     act(a)
     props.onClose()
   }
-
   return (
-    <Sheet title={bf.name} onClose={props.onClose}>
+    <Sheet title={p.name} flipped={props.flipped} onClose={props.onClose}>
+      <h3>Pontos</h3>
+      <div className="actions two">
+        <button className="action" onClick={() => done({ type: 'adjustPoints', player, delta: -1 })} disabled={p.points === 0}>
+          <b>−1 ponto</b>
+          <small>Corrigir um toque errado</small>
+        </button>
+        <button className="action" onClick={() => done({ type: 'adjustPoints', player, delta: 1 })}>
+          <b>+1 por efeito</b>
+          <small>Carta que dá pontos</small>
+        </button>
+      </div>
+      <Stepper label="XP" value={p.xp} onChange={(delta) => act({ type: 'adjustXp', player, delta })} />
+      <h3>Jogo</h3>
+      <div className="actions">
+        <button className="action" onClick={() => confirm(`${p.name} sofreu Burn Out? ${opponent} ganha 1 ponto.`) && done({ type: 'burnOut', player })}>
+          <b>{p.name} sofreu Burn Out</b>
+          <small>Comprou com o deck vazio: {opponent} ganha 1 ponto.</small>
+        </button>
+        <button className="action" onClick={() => confirm(`${p.name} venceu por efeito de carta?`) && done({ type: 'winByEffect', player })}>
+          <b>{p.name} venceu por efeito de carta</b>
+          <small>Ex.: The Grand Plaza, com 7 ou mais unidades.</small>
+        </button>
+        <button className="action" onClick={() => confirm(`${p.name} concede o jogo?`) && done({ type: 'concede', player })}>
+          <b>{p.name} concede</b>
+        </button>
+      </div>
+    </Sheet>
+  )
+}
+
+function BattlefieldSheet({ name, onClose }: { name: string; onClose: () => void }) {
+  const card = findBattlefield(name)
+  return (
+    <Sheet title={name} onClose={onClose}>
       {card && (
-        <div className="bf-detail has-art" style={battlefieldArt(bf.name, 800)}>
+        <div className="bf-detail has-art" style={battlefieldArt(name, 800)}>
           <p>{card.text}</p>
         </div>
       )}
-      <p className="hint">
-        Battlefield de {game.players[bf.owner].name}
-        {card && ` · ${card.setName}`}.
-      </p>
-      <h3>Conquista</h3>
-      <div className="actions">
-        {([0, 1] as const)
-          .filter((p) => bf.controller !== p)
-          .map((p) => {
-            const outcome = conquerOutcome(game, p, bf.id)
-            return (
-              <button key={p} className={`action p${p}`} onClick={() => done({ type: 'conquer', player: p, battlefieldId: bf.id })}>
-                <b>{game.players[p].name} conquistou</b>
-                <small className={outcome === 'blocked' ? 'warn' : ''}>
-                  {outcome === 'point' && '+1 ponto'}
-                  {outcome === 'blocked' && 'Ponto final barrado: ainda falta pontuar o outro battlefield neste turno. Compra 1 carta.'}
-                  {outcome === 'already-scored' && 'Já pontuado neste turno: só muda o controle.'}
-                </small>
-              </button>
-            )
-          })}
-      </div>
-      <h3>Corrigir controle (sem pontuar)</h3>
-      <div className="segmented">
-        {([0, 1, null] as const).map((p) => (
-          <button
-            key={String(p)}
-            className={bf.controller === p ? 'on' : ''}
-            onClick={() => done({ type: 'setControl', battlefieldId: bf.id, controller: p })}
-          >
-            {p === null ? 'Ninguém' : game.players[p].name}
-          </button>
-        ))}
-      </div>
-      <p className="hint">Use quando alguém perder o controle sem conquista, por exemplo ao ficar sem unidades no battlefield.</p>
+      {card && <p className="hint">{card.setName}</p>}
     </Sheet>
   )
 }
 
-function PoolSheet(props: {
-  game: GameState
-  legend: string | undefined
-  player: PlayerIndex
-  flipped: boolean
-  act: (a: GameAction) => void
-  onClose: () => void
-}) {
-  const { game, player, act } = props
-  const p = game.players[player]
-  const legend = findLegend(props.legend)
-  // Com lenda definida, só os domínios dela aparecem: o deck segue a Domain Identity da lenda (CR 103.2.b).
-  const kinds: PowerKind[] = [...DOMAINS, 'universal'].filter(
-    (k) => !legend || k === 'universal' || legend.domains.includes(k as Domain) || p.power[k as PowerKind] > 0,
-  ) as PowerKind[]
-  return (
-    <Sheet title={`Rune pool de ${p.name}`} flipped={props.flipped} onClose={props.onClose}>
-      <p className="hint">Energy e Power acumulados. O pool esvazia sozinho quando alguém passa a vez.</p>
-      <div className="pool-grid">
-        <Stepper label="Energy" value={p.energy} onChange={(delta) => act({ type: 'adjustEnergy', player, delta })} />
-        {kinds.map((kind) => (
-          <Stepper
-            key={kind}
-            label={POWER_LABELS[kind]}
-            color={DOMAIN_COLORS[kind]}
-            value={p.power[kind]}
-            onChange={(delta) => act({ type: 'adjustPower', player, kind, delta })}
-          />
-        ))}
-      </div>
-      <button className="secondary" onClick={() => act({ type: 'clearPool', player })}>
-        Esvaziar pool
-      </button>
-    </Sheet>
-  )
-}
-
-/** Faixa do turno, virada para o jogador da vez. */
-function TurnStrip({ match, game, flipped, act }: { match: MatchState; game: GameState; flipped: boolean; act: (a: GameAction) => void }) {
-  const extraRune = runesToChannel(game) > 2
-  const extra = extraTurn(game)
-  // Avisos em ordem de prioridade: turnos extras do fim do tempo, runa extra, dica padrão.
-  const note =
-    extra === 0
-      ? { text: 'Tempo esgotado: termine este turno. Depois vêm 3 turnos extras.', emph: true }
-      : extra !== null
-        ? { text: `Turno extra ${extra} de ${EXTRA_TURNS}. Ao fim, vence quem tiver 2+ pontos de vantagem.`, emph: true }
-        : extraRune
-          ? { text: 'Primeiro turno: canalize 3 runas (1 extra).', emph: true }
-          : { text: 'Toque num battlefield para registrar uma conquista.', emph: false }
-  return (
-    <div className={`turnstrip p${game.active} ${flipped ? 'flipped' : ''}`}>
-      <div className="turn-info">
-        <span className="turn-head">
-          Turno {game.turn} · vez de <b className={`c${game.active}`}>{game.players[game.active].name}</b>
-        </span>
-        {match.timer && !match.timeUp && <RoundClock match={match} />}
-        <span className={note.emph ? 'turn-note emph' : 'turn-note'}>{note.text}</span>
-      </div>
-      <button className="primary next" onClick={() => act({ type: 'passTurn' })}>
-        Passar a vez →
-      </button>
-    </div>
-  )
-}
-
-/** Mostra por alguns segundos o que acabou de acontecer com o placar. */
-function Toast({ game }: { game: GameState }) {
-  const [message, setMessage] = useState<{ lines: string[]; warn: boolean } | null>(null)
+/** Mostra por alguns segundos o que acabou de acontecer no placar, com atalho para desfazer. */
+function Toast({ game, onUndo }: { game: GameState; onUndo: () => void }) {
+  const [message, setMessage] = useState<{ lines: string[]; warn: boolean; undoable: boolean } | null>(null)
   const seen = useRef(game.log.length)
 
   useEffect(() => {
     const fresh = game.log.slice(seen.current)
+    const undone = game.log.length < seen.current
     seen.current = game.log.length
+    // Desfazer some com o aviso; o fim do jogo tem a sua própria tela.
+    if (undone) return setMessage(null)
     const relevant = fresh.filter((e) => e.kind !== 'result')
-    // Uma passagem de turno sem pontos não precisa de aviso.
-    if (relevant.every((e) => e.kind === 'turn-start')) return
-    const warn = relevant.some((e) => e.kind === 'final-point-blocked' || e.kind === 'already-scored' || e.kind === 'time-up')
-    setMessage({ lines: relevant.map((e) => describeLog(game, e)), warn })
-    const t = setTimeout(() => setMessage(null), warn ? 6000 : 3000)
+    if (relevant.length === 0) return
+    const warn = relevant.some((e) => e.kind === 'final-point-blocked' || e.kind === 'time-up')
+    // O fim do tempo vem do relógio: desfazer só faria o aviso voltar.
+    const undoable = relevant.some((e) => e.kind !== 'time-up')
+    setMessage({ lines: relevant.map((e) => describeLog(game, e)), warn, undoable })
+    const t = setTimeout(() => setMessage(null), warn ? 6000 : 3500)
     return () => clearTimeout(t)
   }, [game])
 
   if (!message) return null
   return (
     <div className={`toast ${message.warn ? 'warn' : ''}`} role="status">
-      {message.lines.map((line, i) => (
-        <div key={i}>{line}</div>
-      ))}
+      <span>
+        {message.lines.map((line, i) => (
+          <div key={i}>{line}</div>
+        ))}
+      </span>
+      {message.undoable && (
+        <button className="toast-undo" onClick={onUndo}>
+          Desfazer
+        </button>
+      )}
     </div>
   )
 }
 
-
-function MenuSheet(props: { state: AppState; match: MatchState; game: GameState; onRules: () => void; act: (a: GameAction) => void; dispatch: (a: AppAction) => void; onClose: () => void }) {
-  const { game, act } = props
+function MenuSheet(props: {
+  state: AppState
+  match: MatchState
+  game: GameState
+  onLog: () => void
+  onRules: () => void
+  act: (a: GameAction) => void
+  dispatch: (a: AppAction) => void
+  onClose: () => void
+}) {
+  const { act } = props
   const close = (fn: () => void) => () => {
     fn()
     props.onClose()
   }
   return (
     <Sheet title="Menu" onClose={props.onClose}>
+      <div className="actions two">
+        <button className="action" onClick={props.onLog}>
+          <b>📜 Histórico</b>
+        </button>
+        <button className="action" onClick={props.onRules}>
+          <b>📖 Regras</b>
+        </button>
+      </div>
       <h3>Preferências</h3>
       <SettingsToggles settings={props.state.settings} dispatch={props.dispatch} />
-      <button className="secondary" onClick={props.onRules}>
-        📖 Regras rápidas
-      </button>
       <h3>Partida</h3>
       <div className="actions">
         {props.match.timer?.startedAt != null && !props.match.timeUp && (
@@ -372,28 +396,17 @@ function MenuSheet(props: { state: AppState; match: MatchState; game: GameState;
           </button>
         )}
         <button className="action" onClick={close(() => props.dispatch({ type: 'toggleTableMode' }))}>
-          <b>{props.state.tableMode ? 'Não girar' : 'Girar'} o painel do oponente</b>
+          <b>{props.state.tableMode ? 'Não girar' : 'Girar'} o placar do oponente</b>
           <small>Para quem joga frente a frente com o celular no meio da mesa.</small>
         </button>
-        {([0, 1] as const).map((p) => (
-          <button key={p} className="action" onClick={close(() => confirm(`${game.players[p].name} concede o jogo?`) && act({ type: 'concede', player: p }))}>
-            <b>{game.players[p].name} concede</b>
-          </button>
-        ))}
-        {([0, 1] as const).map((p) => (
-          <button key={`win${p}`} className="action" onClick={close(() => confirm(`${game.players[p].name} venceu por efeito de carta?`) && act({ type: 'winByEffect', player: p }))}>
-            <b>{game.players[p].name} venceu por efeito de carta</b>
-            <small>Ex.: The Grand Plaza, com 7 ou mais unidades.</small>
-          </button>
-        ))}
         <button className="action" onClick={close(() => confirm('Declarar o jogo empatado?') && act({ type: 'declareDraw' }))}>
           <b>Declarar empate</b>
-          <small>Por exemplo, quando o tempo da rodada acaba sem vantagem de 2 pontos.</small>
         </button>
         <button className="action danger" onClick={close(() => confirm('Abandonar a partida inteira?') && props.dispatch({ type: 'quit' }))}>
           <b>Abandonar partida</b>
         </button>
       </div>
+      <p className="hint">Burn Out, pontos por efeito, XP e concessão ficam no ⋯ de cada jogador.</p>
     </Sheet>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from 'react'
 import { isMatchOver, matchReducer, type MatchAction, type MatchPlayer, type MatchState } from './engine/match'
 import type { Deck } from './engine/deck'
+import { migrateGame } from './engine/game'
 import { mergeRecords, recordFromMatch, type MatchRecord } from './engine/stats'
 
 export interface Settings {
@@ -122,9 +123,13 @@ function write(key: string, value: unknown): void {
 
 function load(): AppState {
   const saved = read<Partial<AppState>>(STATE_KEY)
+  const match = saved?.match ?? null
+  // Jogo em andamento salvo pela versão com turnos: converte e descarta o histórico de desfazer antigo.
+  const legacy = !!match?.game && 'turn' in match.game
+  if (legacy) match.game = migrateGame(match.game)
   return {
-    match: saved?.match ?? null,
-    history: saved?.history ?? [],
+    match,
+    history: legacy ? [] : (saved?.history ?? []),
     tableMode: saved?.tableMode ?? true,
     records: read<MatchRecord[]>(RECORDS_KEY) ?? [],
     settings: { ...DEFAULT_SETTINGS, ...saved?.settings },
