@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { cardImage, findLegend, legendImage, LEGENDS } from '../data/cards'
 import { gameWins, type MatchPlayer, type MatchState } from '../engine/match'
+import { campaign, eventSummary, nextRound, type TcgEvent } from '../engine/events'
 import { computeStats, matchOutcome, winRate, type MatchRecord } from '../engine/stats'
 import { DomainIcons } from './cards'
 
@@ -22,6 +23,8 @@ export function HomeScreen(props: {
   onSettings: () => void
   onDecks: () => void
   onRules: () => void
+  onEvents: () => void
+  activeEvent: TcgEvent | null
   deckCount: number
 }) {
   const { profile, records } = props
@@ -30,6 +33,9 @@ export function HomeScreen(props: {
   const stats = useMemo(() => computeStats(records), [records])
   const rate = winRate(stats.matches)
   const last = records[0]
+  const event = props.activeEvent
+  const eventSummaryNow = event && eventSummary(event, records)
+  const eventRecord = eventSummaryNow?.record
 
   return (
     <main className="screen home">
@@ -69,11 +75,25 @@ export function HomeScreen(props: {
       </section>
 
       <button className="primary big new-match" onClick={props.onNewMatch}>
-        ⚔ Nova partida
+        {event ? `⚔ Rodada ${nextRound(event, records)}` : '⚔ Nova partida'}
       </button>
 
+      {event && eventRecord && (
+        <button className="event-banner" onClick={props.onEvents}>
+          <span aria-hidden="true">🏆</span>
+          <span>
+            <b>{event.name}</b>
+            <small>
+              Em andamento · {eventSummaryNow!.rounds.length} rodada{eventSummaryNow!.rounds.length === 1 ? '' : 's'}
+            </small>
+          </span>
+          <span className="event-row-campaign">{campaign(eventRecord)}</span>
+        </button>
+      )}
+
       <nav className="tiles">
-        {props.onRematch && last && (
+        {/* No evento, a próxima partida é a próxima rodada: a revanche ficaria fora dele. */}
+        {props.onRematch && last && !event && (
           <button className="tile rematch" onClick={props.onRematch}>
             <span className="tile-icon">↻</span>
             <b>Revanche</b>
@@ -94,6 +114,11 @@ export function HomeScreen(props: {
           <span className="tile-icon">📚</span>
           <b>Cartas</b>
           <small>Biblioteca completa</small>
+        </button>
+        <button className="tile" onClick={props.onEvents}>
+          <span className="tile-icon">🏆</span>
+          <b>Eventos</b>
+          <small>{event ? 'Evento em andamento' : 'Nexus Night e torneios'}</small>
         </button>
         <button className="tile" onClick={props.onRules}>
           <span className="tile-icon">📖</span>

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { findLegend, legendImage } from '../data/cards'
 import type { Deck } from '../engine/deck'
 import { createMatch, type MatchFormat, type MatchPlayer } from '../engine/match'
-import { isPlaceholderBattlefield } from '../engine/stats'
+import { nextRound, type TcgEvent } from '../engine/events'
+import { isPlaceholderBattlefield, type MatchRecord } from '../engine/stats'
 import type { AppAction } from '../store'
 import { ArtPicker, BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker } from './cards'
 
@@ -56,12 +57,22 @@ export function NewMatchScreen(props: {
   decks: Deck[]
   /** Última lenda usada por cada oponente já enfrentado. */
   opponents: Map<string, string | undefined>
+  /** Evento em andamento: a partida entra nele como a próxima rodada. */
+  activeEvent: TcgEvent | null
+  records: MatchRecord[]
   onBack: () => void
 }) {
-  const { dispatch } = props
+  const { dispatch, activeEvent } = props
+  const [inEvent, setInEvent] = useState(!!activeEvent)
+  const round = activeEvent ? nextRound(activeEvent, props.records) : 0
   const [format, setFormat] = useState<MatchFormat>('match')
   const [timer, setTimer] = useState(0)
-  const [drafts, setDrafts] = useState<[Draft, Draft]>(() => [draftFrom(props.profile), emptyDraft()])
+  const [drafts, setDrafts] = useState<[Draft, Draft]>(() => {
+    // No evento, você começa com o deck levado a ele.
+    const deck = activeEvent?.deck ? props.decks.find((d) => d.name === activeEvent.deck) : undefined
+    const me = draftFrom(props.profile)
+    return [deck ? { ...me, deck: deck.name, legend: deck.legend ?? '', legendArt: deck.legendArt ?? '', battlefields: deck.battlefields } : me, emptyDraft()]
+  })
   const [picking, setPicking] = useState<{ player: 0 | 1; slot: number } | null>(null)
   const [pickingLegend, setPickingLegend] = useState<0 | 1 | null>(null)
   const [pickingArt, setPickingArt] = useState<0 | 1 | null>(null)
@@ -89,7 +100,8 @@ export function NewMatchScreen(props: {
     let p1 = toPlayer(drafts[0], 'Jogador 1', 'A')
     const p2 = toPlayer(drafts[1], 'Jogador 2', 'B')
     if (p1.name === p2.name) p1 = { ...p1, name: `${p1.name} (1)` }
-    dispatch({ type: 'newMatch', match: createMatch(format, [p1, p2], timer || undefined) })
+    const match = createMatch(format, [p1, p2], timer || undefined)
+    dispatch({ type: 'newMatch', match: activeEvent && inEvent ? { ...match, eventId: activeEvent.id, round } : match })
   }
 
   const recentOpponents = [...props.opponents.keys()].slice(0, 4)
@@ -101,8 +113,19 @@ export function NewMatchScreen(props: {
         <button className="link back" onClick={props.onBack}>
           ← Início
         </button>
-        <h1>Nova partida</h1>
+        <h1>{activeEvent && inEvent ? `Rodada ${round}` : 'Nova partida'}</h1>
       </header>
+
+      {activeEvent && (
+        <button className={`event-banner ${inEvent ? '' : 'off'}`} onClick={() => setInEvent(!inEvent)} aria-pressed={inEvent}>
+          <span aria-hidden="true">🏆</span>
+          <span>
+            <b>{inEvent ? `${activeEvent.name} · Rodada ${round}` : 'Fora do evento'}</b>
+            <small>{inEvent ? 'Toque para jogar fora do evento' : `Toque para contar como rodada ${round} de ${activeEvent.name}`}</small>
+          </span>
+          <span className="event-row-campaign">{inEvent ? '✓' : '—'}</span>
+        </button>
+      )}
 
       <div className="segmented" role="radiogroup" aria-label="Formato">
         <button role="radio" aria-checked={format === 'match'} className={format === 'match' ? 'on' : ''} onClick={() => setFormat('match')}>

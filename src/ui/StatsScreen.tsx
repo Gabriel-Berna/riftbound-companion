@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'r
 import { cardImage, findLegend } from '../data/cards'
 import { gameWins, type MatchState } from '../engine/match'
 import { computeStats, isMatchRecord, matchOutcome, matchupMatrix, scoringStats, splitTotal, winRate, winRateTimeline, type MatchRecord, type PointsSplit, type StatRow, type Tally } from '../engine/stats'
+import { eventSummary, isTcgEvent, type TcgEvent } from '../engine/events'
 import type { AppAction } from '../store'
 import { battlefieldArt, DomainIcons } from './cards'
 import { MatchupHeatmap, PointsSplitBars, TurnOrderBars, WinRateChart } from './charts'
@@ -30,13 +31,15 @@ function SummaryCard(props: { title: string; tally: Tally; unit: string }) {
 }
 
 /** Linha de tabela com barra de % de vitória. */
-function Row(props: { row: StatRow; label: ReactNode; art?: CSSProperties }) {
+function Row(props: { row: StatRow; label: ReactNode; art?: CSSProperties; unit?: 'jogo' | 'partida' }) {
+  const unit = props.unit ?? 'jogo'
   const rate = winRate(props.row) ?? 0
   return (
     <li className={`stat-row ${props.art ? 'has-art' : ''}`} style={props.art}>
       <span className="stat-row-label">{props.label}</span>
       <span className="stat-row-record">
-        {props.row.played} jogo{props.row.played > 1 ? 's' : ''} · {record(props.row)}
+        {props.row.played} {unit}
+        {props.row.played > 1 ? 's' : ''} · {record(props.row)}
       </span>
       <span className="stat-row-bar">
         <i style={{ width: `${rate * 100}%` }} />
@@ -106,15 +109,15 @@ function SplitTable({ rows }: { rows: [string, PointsSplit][] }) {
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 
-export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAction) => void; onBack: () => void; onAddManual: () => void }) {
-  const { records, dispatch } = props
+export function StatsScreen(props: { records: MatchRecord[]; events: TcgEvent[]; dispatch: (a: AppAction) => void; onBack: () => void; onAddManual: () => void }) {
+  const { records, events, dispatch } = props
   const [myLegend, setMyLegend] = useState<string | undefined>()
   const stats = useMemo(() => computeStats(records, { myLegend }), [records, myLegend])
   const myLegends = useMemo(() => computeStats(records).byMyLegend.map((r) => r.key), [records])
   const fileInput = useRef<HTMLInputElement>(null)
 
   const exportBackup = () => {
-    const blob = new Blob([JSON.stringify({ app: 'riftbound-companion', version: 1, records }, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify({ app: 'riftbound-companion', version: 2, records, events }, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -129,7 +132,9 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
       const list: unknown[] = Array.isArray(data) ? data : data.records
       const valid = (list ?? []).filter(isMatchRecord)
       if (valid.length === 0) throw new Error('vazio')
-      dispatch({ type: 'importRecords', records: valid })
+      // Backups a partir da versão 2 trazem também os eventos.
+      const importedEvents: TcgEvent[] = Array.isArray(data.events) ? data.events.filter(isTcgEvent) : []
+      dispatch({ type: 'importRecords', records: valid, events: importedEvents })
       alert(`${valid.length} partida${valid.length > 1 ? 's' : ''} no arquivo. Partidas repetidas foram ignoradas.`)
     } catch {
       alert('Não foi possível ler esse arquivo. Use um backup exportado pelo Riftbound Companion.')
@@ -140,6 +145,14 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
   const timeline = useMemo(() => winRateTimeline(records, { myLegend }), [records, myLegend])
   const matchup = useMemo(() => matchupMatrix(visible), [visible])
   const scoring = useMemo(() => scoringStats(records, { myLegend }), [records, myLegend])
+  // Campanha de cada evento em partidas, como linha da tabela (só eventos com partidas da lenda filtrada).
+  const byEvent = useMemo<(StatRow & { name: string })[]>(
+    () =>
+      events
+        .map((e) => ({ name: e.name, key: e.id, ...eventSummary(e, visible).record }))
+        .filter((r) => r.played > 0),
+    [events, visible],
+  )
 
   return (
     <main className="screen setup stats">
@@ -260,7 +273,8 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
             rows={stats.byOpponentLegend}
             render={(row) => <Row key={row.key} row={row} label={legendLabel(row.key)} art={legendArt(row.key)} />}
           />
-          <Section title="Oponentes (partidas)" rows={stats.byOpponent} render={(row) => <Row key={row.key} row={row} label={row.key} />} />
+          <Section title="Eventos (partidas)" rows={byEvent} render={(row) => <Row key={row.key} row={row} label={(row as (typeof byEvent)[number]).name} unit="partida" />} />
+          <Section title="Oponentes (partidas)" rows={stats.byOpponent} render={(row) => <Row key={row.key} row={row} label={row.key} unit="partida" />} />
           <Section
             title="Seus battlefields"
             rows={stats.byMyBattlefield}
@@ -297,6 +311,7 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
                     </div>
                     <div className="hint">
                       {formatDate(r.date)} · {me?.champion ?? 'Lenda ?'} × {them?.champion ?? 'Lenda ?'}
+                      {r.eventId && events.some((e) => e.id === r.eventId) && ` · ${events.find((e) => e.id === r.eventId)!.name} R${r.round ?? '?'}`}
                       {r.source === 'manual' && ' · registrada à mão'}
                     </div>
                   </li>

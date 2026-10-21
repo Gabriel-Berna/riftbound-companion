@@ -1,11 +1,23 @@
 import { useState } from 'react'
 import { createMatch, gameWins, matchWinner, type MatchState } from '../engine/match'
+import { campaign, eventSummary, type TcgEvent } from '../engine/events'
+import type { MatchRecord } from '../engine/stats'
 import type { AppAction } from '../store'
 import { findLegend } from '../data/cards'
 import { Brand } from './common'
 import { shareResult } from './share'
 
-export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchState; dispatch: (a: AppAction) => void; onStats: () => void }) {
+export function MatchOverScreen(props: {
+  match: MatchState
+  /** Evento desta partida, se houver; a campanha conta os registros (esta partida já está neles). */
+  event: TcgEvent | null
+  records: MatchRecord[]
+  dispatch: (a: AppAction) => void
+  onStats: () => void
+  onNextRound: () => void
+  onEvent: () => void
+}) {
+  const { match, dispatch, onStats, event } = props
   const winner = matchWinner(match)
   const wins = gameWins(match)
   const name = (p: 0 | 1) => match.players[p].name
@@ -33,6 +45,19 @@ export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchStat
           )
         }
       />
+
+      {event && (
+        <section className="event-banner">
+          <span aria-hidden="true">🏆</span>
+          <span>
+            <b>
+              {event.name} · Rodada {match.round}
+            </b>
+            <small>Campanha no evento</small>
+          </span>
+          <span className="event-row-campaign">{campaign(eventSummary(event, props.records).record)}</span>
+        </section>
+      )}
 
       {match.players.some((pl) => findLegend(pl.legend)) && (
         <section className="card">
@@ -69,12 +94,28 @@ export function MatchOverScreen({ match, dispatch, onStats }: { match: MatchStat
       <button className="secondary share-btn" onClick={share} disabled={sharing}>
         {sharing ? 'Gerando imagem…' : '📤 Compartilhar resultado'}
       </button>
-      <button className="primary big" onClick={() => dispatch({ type: 'newMatch', match: createMatch(match.format, match.players, match.timer?.minutes) })}>
-        Revanche
-      </button>
-      <button className="secondary" onClick={() => dispatch({ type: 'quit' })}>
-        Nova partida
-      </button>
+      {event ? (
+        <>
+          {/* No evento, o próximo passo é a próxima rodada (outro oponente), não uma revanche fora do evento. */}
+          {!event.closed && (
+            <button className="primary big" onClick={props.onNextRound}>
+              ⚔ Próxima rodada
+            </button>
+          )}
+          <button className="secondary" onClick={props.onEvent}>
+            Ver o evento
+          </button>
+        </>
+      ) : (
+        <>
+          <button className="primary big" onClick={() => dispatch({ type: 'newMatch', match: createMatch(match.format, match.players, match.timer?.minutes) })}>
+            Revanche
+          </button>
+          <button className="secondary" onClick={() => dispatch({ type: 'quit' })}>
+            Nova partida
+          </button>
+        </>
+      )}
       <button className="link" onClick={onStats}>
         Partida salva nas estatísticas · ver estatísticas
       </button>

@@ -3,6 +3,7 @@ import { createMatch, isMatchOver, type MatchAction } from './engine/match'
 import { useAppStore } from './store'
 import type { Deck } from './engine/deck'
 import { DeckEditor, DecksScreen } from './ui/DecksScreen'
+import { EventsScreen } from './ui/EventsScreen'
 import { GameScreen } from './ui/GameScreen'
 import { GameSetupScreen } from './ui/GameSetupScreen'
 import { HomeScreen } from './ui/HomeScreen'
@@ -16,7 +17,7 @@ import { SettingsScreen } from './ui/SettingsScreen'
 import { StatsScreen } from './ui/StatsScreen'
 import { useRoundClock } from './ui/timer'
 
-type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings' | 'decks' | 'rules'
+type View = 'home' | 'new' | 'stats' | 'manual' | 'library' | 'settings' | 'decks' | 'rules' | 'events'
 
 export function App() {
   const [state, dispatch] = useAppStore()
@@ -24,6 +25,7 @@ export function App() {
   // `paste`: deck novo que já abre na colagem da lista.
   const [editingDeck, setEditingDeck] = useState<{ deck: Deck; paste?: boolean } | null>(null)
   const { match, records } = state
+  const activeEvent = state.events.find((e) => e.id === state.activeEventId) ?? null
   const home = () => setView('home')
   const matchDispatch = useCallback((action: MatchAction) => dispatch({ type: 'match', action }), [dispatch])
   useRoundClock(match, matchDispatch)
@@ -51,7 +53,24 @@ export function App() {
       dispatch({ type: 'quit' })
       setView('stats')
     }
-    return <MatchOverScreen match={match} dispatch={dispatch} onStats={showStats} />
+    const event = state.events.find((e) => e.id === match.eventId) ?? null
+    return (
+      <MatchOverScreen
+        match={match}
+        event={event}
+        records={records}
+        dispatch={dispatch}
+        onStats={showStats}
+        onNextRound={() => {
+          dispatch({ type: 'quit' })
+          setView('new')
+        }}
+        onEvent={() => {
+          dispatch({ type: 'quit' })
+          setView('events')
+        }}
+      />
+    )
   }
   // A key recria a tela a cada jogo, zerando as escolhas do jogo anterior.
   if (match) return <GameSetupScreen key={match.games.length} match={match} dispatch={dispatch} />
@@ -71,6 +90,18 @@ export function App() {
   switch (view) {
     case 'rules':
       return <RulesScreen onClose={home} />
+    case 'events':
+      return (
+        <EventsScreen
+          events={state.events}
+          records={records}
+          decks={state.decks}
+          activeEventId={state.activeEventId}
+          dispatch={dispatch}
+          onPlay={() => setView('new')}
+          onBack={home}
+        />
+      )
     case 'decks':
       return <DecksScreen decks={state.decks} onOpen={(deck, paste) => setEditingDeck({ deck, paste })} onBack={home} />
     case 'new': {
@@ -79,20 +110,22 @@ export function App() {
         dispatch(a)
         if (a.type === 'newMatch') home()
       }
-      return <NewMatchScreen dispatch={startMatch} profile={profile} decks={state.decks} opponents={opponents} onBack={home} />
+      return <NewMatchScreen dispatch={startMatch} profile={profile} decks={state.decks} opponents={opponents} activeEvent={activeEvent} records={records} onBack={home} />
     }
     case 'library':
       return <LibraryScreen onClose={home} />
     case 'settings':
       return <SettingsScreen state={state} profile={profile} dispatch={dispatch} onBack={home} />
     case 'stats':
-      return <StatsScreen records={records} dispatch={dispatch} onBack={home} onAddManual={() => setView('manual')} />
+      return <StatsScreen records={records} events={state.events} dispatch={dispatch} onBack={home} onAddManual={() => setView('manual')} />
     case 'manual':
       return (
         <ManualRecordScreen
           myName={profile?.name ?? ''}
           myLegend={profile?.legend}
           opponents={[...opponents.keys()]}
+          activeEvent={activeEvent}
+          records={records}
           dispatch={dispatch}
           onDone={() => setView('stats')}
         />
@@ -111,6 +144,8 @@ export function App() {
           onSettings={() => setView('settings')}
           onDecks={() => setView('decks')}
           onRules={() => setView('rules')}
+          onEvents={() => setView('events')}
+          activeEvent={activeEvent}
           deckCount={state.decks.length}
         />
       )

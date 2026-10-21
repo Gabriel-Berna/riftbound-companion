@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { findLegend } from '../data/cards'
 import type { CompletedGame, MatchFormat } from '../engine/match'
+import { nextRound, type TcgEvent } from '../engine/events'
 import type { MatchRecord } from '../engine/stats'
 import type { PlayerIndex } from '../engine/types'
 import { newId, type AppAction } from '../store'
@@ -33,9 +34,15 @@ export function ManualRecordScreen(props: {
   myName: string
   myLegend?: string
   opponents: string[]
+  /** Evento em andamento: a partida registrada pode contar como a próxima rodada. */
+  activeEvent: TcgEvent | null
+  records: MatchRecord[]
   dispatch: (a: AppAction) => void
   onDone: () => void
 }) {
+  const { activeEvent } = props
+  const [inEvent, setInEvent] = useState(!!activeEvent)
+  const round = activeEvent ? nextRound(activeEvent, props.records) : 0
   const [date, setDate] = useState(today)
   const [myName, setMyName] = useState(props.myName)
   const [opponent, setOpponent] = useState('')
@@ -58,6 +65,7 @@ export function ManualRecordScreen(props: {
       ],
       games: (format === 'duel' ? games.slice(0, 1) : games).map(toGame),
       source: 'manual',
+      ...(activeEvent && inEvent && { eventId: activeEvent.id, round }),
     }
     props.dispatch({ type: 'addRecord', record })
     props.onDone()
@@ -84,6 +92,17 @@ export function ManualRecordScreen(props: {
           </button>
         </div>
       </section>
+
+      {activeEvent && (
+        <button className={`event-banner ${inEvent ? '' : 'off'}`} onClick={() => setInEvent(!inEvent)} aria-pressed={inEvent}>
+          <span aria-hidden="true">🏆</span>
+          <span>
+            <b>{inEvent ? `${activeEvent.name} · Rodada ${round}` : 'Fora do evento'}</b>
+            <small>{inEvent ? 'Toque para registrar fora do evento' : `Toque para contar como rodada ${round}`}</small>
+          </span>
+          <span className="event-row-campaign">{inEvent ? '✓' : '—'}</span>
+        </button>
+      )}
 
       {([0, 1] as const).map((p) => (
         <section key={p} className={`card player-card p${p}`}>

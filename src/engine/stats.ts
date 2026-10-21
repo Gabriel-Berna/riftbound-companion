@@ -13,6 +13,9 @@ export interface MatchRecord {
   games: CompletedGame[]
   /** 'app' = jogada com o placar do app; 'manual' = registrada depois. */
   source: 'app' | 'manual'
+  /** Evento em que a partida foi jogada e a rodada dela, se houver. */
+  eventId?: string
+  round?: number
 }
 
 export type Outcome = 'win' | 'loss' | 'draw'
@@ -46,13 +49,27 @@ export interface Stats {
 export interface StatsFilter {
   /** Considera só as partidas jogadas com esta lenda sua. */
   myLegend?: string
+  /** Considera só as partidas deste evento. */
+  eventId?: string
 }
+
+/** A partida entra nas estatísticas com este filtro. */
+export const matchesFilter = (r: MatchRecord, f: StatsFilter): boolean =>
+  (!f.myLegend || r.players[0].legend === f.myLegend) && (!f.eventId || r.eventId === f.eventId)
 
 /** Nomes automáticos dados a battlefields não informados (ex.: "Battlefield A1"). */
 export const isPlaceholderBattlefield = (name: string): boolean => /^Battlefield [AB]\d/.test(name)
 
 export function recordFromMatch(m: MatchState, id: string, date: Date): MatchRecord {
-  return { id, date: date.toISOString(), format: m.format, players: m.players, games: m.games, source: 'app' }
+  return {
+    id,
+    date: date.toISOString(),
+    format: m.format,
+    players: m.players,
+    games: m.games,
+    source: 'app',
+    ...(m.eventId && { eventId: m.eventId, round: m.round }),
+  }
 }
 
 const emptyTally = (): Tally => ({ played: 0, wins: 0, losses: 0, draws: 0 })
@@ -107,7 +124,7 @@ export function computeStats(records: MatchRecord[], filter: StatsFilter = {}): 
 
   for (const r of records) {
     const [me, opponent] = r.players
-    if (filter.myLegend && me.legend !== filter.myLegend) continue
+    if (!matchesFilter(r, filter)) continue
     if (r.games.length === 0) continue
 
     const mo = matchOutcome(r)
@@ -212,7 +229,7 @@ export function scoringStats(records: MatchRecord[], filter: StatsFilter = {}): 
   }
 
   for (const r of records) {
-    if (filter.myLegend && r.players[0].legend !== filter.myLegend) continue
+    if (!matchesFilter(r, filter)) continue
     const theirs = r.players[1].legend
     for (const g of r.games) {
       if (!g.scoring && g.durationMs === undefined) continue
@@ -249,7 +266,7 @@ export function winRateTimeline(records: MatchRecord[], filter: StatsFilter = {}
   let wins = 0
   const chronological = [...records].sort((a, b) => a.date.localeCompare(b.date))
   for (const r of chronological) {
-    if (filter.myLegend && r.players[0].legend !== filter.myLegend) continue
+    if (!matchesFilter(r, filter)) continue
     for (const g of r.games) {
       const outcome = gameOutcome(g)
       if (outcome === 'win') wins += 1

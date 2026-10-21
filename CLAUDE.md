@@ -13,8 +13,9 @@ PWA (React + TypeScript + Vite) de apoio a partidas do TCG Riftbound. Interface 
 - `src/data/rules.ts`: regras rápidas exibidas no app; manter coerente com `docs/regras-riftbound.md`.
 - `public/art/legends/`: cópias locais das artes das lendas, geradas pelo `sync-cards` (a CDN não tem CORS; a imagem de compartilhar e a introdução usam essas).
 - Testes no navegador começam pela introdução de primeiro uso: depois de limpar o localStorage, clicar em "Pular".
-- Estatísticas (`src/engine/stats.ts`): `players[0]` de cada registro é sempre o dono do celular (Jogador 1).
+- Estatísticas (`src/engine/stats.ts`): `players[0]` de cada registro é sempre o dono do celular (Jogador 1). Cada jogo guarda `scoring` (pontos por Hold, Conquer e outros) e `durationMs` (do início até a tela de resultado).
+- Eventos (`src/engine/events.ts`) ficam em `riftbound-companion/events/v1`; a partida aponta para o evento por `eventId` e `round`. Apagar um evento não apaga partidas: só tira o vínculo.
 - Regras oficiais: `docs/regras-riftbound.md` (resumo) e `docs/fontes/` (textos completos, pesquisáveis com grep).
 - Comandos: `npm test`, `npm run build` (inclui `tsc -b`).
-- Nos testes, loops que passam turnos precisam parar quando o jogo termina (`state.result`), senão o Vitest trava sem mensagem.
+- Nos testes, loops que pontuam precisam parar quando o jogo termina (`state.result`): depois do resultado o reducer ignora as ações e o loop nunca acaba, travando o Vitest sem mensagem.
 - Interação mínima durante a partida: o jogador quer olhar para as cartas, não para o celular. A tela de jogo é só placar: um toque na metade esquerda da lenda = ponto de Hold, na direita = Conquer (`score`). O app não acompanha turnos, fases, controle de battlefields nem rune pool; não reintroduzir. A única pergunta durante o jogo é a do Ponto Final (CR 473.1.b).

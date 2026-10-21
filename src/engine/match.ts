@@ -67,6 +67,9 @@ export interface MatchState {
   timer?: RoundTimer | null
   /** O tempo da rodada acabou: nenhum jogo novo começa (TR 408.2.d). */
   timeUp?: boolean
+  /** Evento e rodada desta partida, se ela fizer parte de um evento. */
+  eventId?: string
+  round?: number
 }
 
 /** Quem define quem começa o próximo jogo (TR 407). */
