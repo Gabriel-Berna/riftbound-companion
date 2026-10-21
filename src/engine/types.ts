@@ -41,4 +41,6 @@ export interface GameState {
   result: GameResult | null
   /** O tempo da rodada acabou: os jogadores terminam o turno e jogam os turnos extras (TR 408.2). */
   timeUp?: boolean
+  /** Início do jogo (ms desde 1970), para medir a duração. */
+  startedAt?: number
 }

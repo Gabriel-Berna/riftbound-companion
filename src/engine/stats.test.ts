@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CompletedGame } from './match'
-import { computeStats, isMatchRecord, matchOutcome, matchupKey, matchupMatrix, mergeRecords, winRate, winRateTimeline, type MatchRecord } from './stats'
+import { computeStats, isMatchRecord, matchOutcome, matchupKey, matchupMatrix, mergeRecords, scoringStats, splitTotal, winRate, winRateTimeline, type MatchRecord } from './stats'
 import type { PlayerIndex } from './types'
 
 const game = (winner: PlayerIndex | 'draw', firstPlayer: PlayerIndex, bfs: [string, string] = ['A1', 'B1']): CompletedGame => ({
@@ -127,5 +127,42 @@ describe('backup', () => {
     expect(isMatchRecord(record('A', 'L', 'L', [game(0, 0)]))).toBe(true)
     expect(isMatchRecord({ id: 'x' })).toBe(false)
     expect(isMatchRecord(null)).toBe(false)
+  })
+})
+
+describe('origem dos pontos e duração', () => {
+  const scored = (hold: [number, number], conquer: [number, number], other: [number, number], durationMs?: number): CompletedGame => ({
+    ...game(0, 0),
+    scoring: { hold, conquer, other },
+    ...(durationMs !== undefined && { durationMs }),
+  })
+  const records = [
+    record('Bruno', 'Loose Cannon', 'Nine-Tailed Fox', [scored([3, 1], [5, 2], [0, 1], 20 * 60_000), scored([2, 2], [6, 4], [0, 0], 30 * 60_000)]),
+    record('Carla', 'Daughter of the Void', 'Blind Monk', [scored([4, 3], [4, 5], [1, 0])]),
+    // Registro manual: sem placar detalhado, não entra.
+    record('Davi', 'Loose Cannon', 'Blind Monk', [game(1, 0)]),
+  ]
+
+  it('soma seus pontos e os do oponente por origem', () => {
+    const s = scoringStats(records)
+    expect(s.games).toBe(3)
+    expect(s.mine).toEqual({ hold: 9, conquer: 15, other: 1 })
+    expect(s.theirs).toEqual({ hold: 6, conquer: 11, other: 1 })
+    expect(splitTotal(s.mine)).toBe(25)
+  })
+
+  it('a duração média usa só os jogos medidos', () => {
+    const s = scoringStats(records)
+    expect(s.timedGames).toBe(2)
+    expect(s.avgDurationMs).toBe(25 * 60_000)
+  })
+
+  it('separa por lenda adversária e respeita o filtro da sua lenda', () => {
+    const s = scoringStats(records)
+    expect(s.byOpponentLegend.map((r) => [r.key, r.games, r.avgDurationMs])).toEqual([
+      ['Nine-Tailed Fox', 2, 25 * 60_000],
+      ['Blind Monk', 1, null],
+    ])
+    expect(scoringStats(records, { myLegend: 'Daughter of the Void' }).theirs).toEqual({ hold: 3, conquer: 5, other: 0 })
   })
 })

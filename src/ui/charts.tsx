@@ -1,6 +1,6 @@
 import { useState, type PointerEvent } from 'react'
 import { findLegend } from '../data/cards'
-import { matchupKey, winRate, type Matchup, type Tally, type TimelinePoint } from '../engine/stats'
+import { matchupKey, splitTotal, winRate, type Matchup, type PointsSplit, type Tally, type TimelinePoint } from '../engine/stats'
 
 const pct = (rate: number) => `${Math.round(rate * 100)}%`
 const tallyText = (t: Tally) => `${t.played} jogo${t.played > 1 ? 's' : ''} · ${t.wins}V ${t.losses}D${t.draws ? ` ${t.draws}E` : ''}`
@@ -156,5 +156,69 @@ export function MatchupHeatmap({ matchup }: { matchup: Matchup }) {
         )}
       </p>
     </div>
+  )
+}
+
+/** Origens dos pontos, na ordem fixa das cores (validadas para o fundo escuro do app). */
+const SOURCES = [
+  { key: 'hold', label: 'Hold', icon: '⚑' },
+  { key: 'conquer', label: 'Conquer', icon: '⚔' },
+  { key: 'other', label: 'Efeitos e outros', icon: '✦' },
+] as const
+
+type Source = (typeof SOURCES)[number]['key']
+
+/** Barras 100% empilhadas: de onde vêm os seus pontos e os dos oponentes, com dica ao tocar em cada parte. */
+/** `whose` completa a dica: "58% dos seus pontos por Conquer". */
+export function PointsSplitBars({ rows }: { rows: { label: string; whose: string; split: PointsSplit }[] }) {
+  const [active, setActive] = useState<{ row: number; source: Source } | null>(null)
+  const tip = active && rows[active.row]
+  return (
+    <figure className="chart split-chart">
+      <div className="split-legend" aria-hidden="true">
+        {SOURCES.map((s) => (
+          <span key={s.key}>
+            <i className={`swatch ${s.key}`} /> {s.icon} {s.label}
+          </span>
+        ))}
+      </div>
+      {rows.map((r, i) => {
+        const total = splitTotal(r.split)
+        return (
+          <div key={r.label} className="split-row">
+            <span className="split-label">
+              {r.label} <small>{total} pontos</small>
+            </span>
+            <div className="split-track" role="img" aria-label={`${r.label}: ${SOURCES.map((s) => `${r.split[s.key]} por ${s.label}`).join(', ')}`}>
+              {SOURCES.filter((s) => r.split[s.key] > 0).map((s) => {
+                const share = r.split[s.key] / total
+                return (
+                  <button
+                    key={s.key}
+                    className={`split-seg ${s.key} ${active?.row === i && active.source === s.key ? 'on' : ''}`}
+                    style={{ flexGrow: r.split[s.key] }}
+                    onPointerEnter={() => setActive({ row: i, source: s.key })}
+                    onClick={() => setActive({ row: i, source: s.key })}
+                    aria-label={`${s.label}: ${r.split[s.key]} pontos (${pct(share)})`}
+                  >
+                    {share >= 0.12 && <span>{pct(share)}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+      <figcaption className="chart-tip">
+        {tip && active ? (
+          <>
+            <b>{pct(tip.split[active.source] / splitTotal(tip.split))}</b> {tip.whose} por{' '}
+            {SOURCES.find((s) => s.key === active.source)!.label} · {tip.split[active.source]} de {splitTotal(tip.split)}
+          </>
+        ) : (
+          'Toque numa parte da barra para ver os números.'
+        )}
+      </figcaption>
+    </figure>
   )
 }

@@ -7,6 +7,7 @@ import {
   isMatchOver,
   matchReducer,
   matchWinner,
+  scoreBreakdown,
   timeLeft,
   type MatchAction,
   type MatchState,
@@ -75,6 +76,49 @@ describe('melhor de 3 (CR 488)', () => {
   it('não encerra um jogo sem resultado', () => {
     const m = run(newMatch(), { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0 })
     expect(run(m, { type: 'finishGame' })).toBe(m)
+  })
+})
+
+describe('origem dos pontos e duração do jogo', () => {
+  const g = (action: object) => ({ type: 'game', action }) as MatchAction
+
+  it('guarda quantos pontos vieram de Hold, Conquer e outros (CR 471)', () => {
+    const m = run(
+      newMatch(),
+      { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0 },
+      g({ type: 'score', player: 0, kind: 'hold' }),
+      g({ type: 'score', player: 0, kind: 'conquer' }),
+      g({ type: 'score', player: 1, kind: 'conquer' }),
+      g({ type: 'adjustPoints', player: 0, delta: 2 }),
+      g({ type: 'burnOut', player: 0 }),
+      g({ type: 'concede', player: 1 }),
+      { type: 'finishGame' },
+    )
+    expect(m.games[0].finalPoints).toEqual([4, 2])
+    expect(m.games[0].scoring).toEqual({ hold: [1, 0], conquer: [1, 1], other: [2, 1] })
+  })
+
+  it('correções com −1 descontam dos pontos de outras origens, sem ficar negativo', () => {
+    const log = [
+      { kind: 'hold', player: 0, points: 1 },
+      { kind: 'hold', player: 0, points: 2 },
+    ] as const
+    expect(scoreBreakdown([...log], [1, 0])).toEqual({ hold: [2, 0], conquer: [0, 0], other: [0, 0] })
+  })
+
+  it('mede a duração do início do jogo até o resultado', () => {
+    const m = run(
+      newMatch(),
+      { type: 'startGame', battlefieldNames: ['A1', 'B1'], firstPlayer: 0, now: 1_000 },
+      g({ type: 'concede', player: 1 }),
+      { type: 'finishGame', now: 1_000 + 25 * 60_000 },
+    )
+    expect(m.games[0].durationMs).toBe(25 * 60_000)
+  })
+
+  it('sem horário de início, a duração fica em branco', () => {
+    const m = playGame(newMatch(), ['A1', 'B1'], 0, 0)
+    expect(m.games[0].durationMs).toBeUndefined()
   })
 })
 

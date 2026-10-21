@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { cardImage, findLegend } from '../data/cards'
 import { gameWins, type MatchState } from '../engine/match'
-import { computeStats, isMatchRecord, matchOutcome, matchupMatrix, winRate, winRateTimeline, type MatchRecord, type StatRow, type Tally } from '../engine/stats'
+import { computeStats, isMatchRecord, matchOutcome, matchupMatrix, scoringStats, splitTotal, winRate, winRateTimeline, type MatchRecord, type PointsSplit, type StatRow, type Tally } from '../engine/stats'
 import type { AppAction } from '../store'
 import { battlefieldArt, DomainIcons } from './cards'
-import { MatchupHeatmap, TurnOrderBars, WinRateChart } from './charts'
+import { MatchupHeatmap, PointsSplitBars, TurnOrderBars, WinRateChart } from './charts'
 import { Brand } from './common'
 import { shareResult } from './share'
 
@@ -71,6 +71,39 @@ function Section(props: { title: string; rows: StatRow[]; render: (row: StatRow)
   )
 }
 
+const minutes = (ms: number) => `${Math.round(ms / 60_000)} min`
+
+const share = (part: number, total: number) => (total ? `${Math.round((part / total) * 100)}%` : '—')
+
+/** Tabela com os números das barras de origem dos pontos. */
+function SplitTable({ rows }: { rows: [string, PointsSplit][] }) {
+  return (
+    <details className="split-table">
+      <summary>Ver em tabela</summary>
+      <table>
+        <thead>
+          <tr>
+            <th />
+            <th>Hold</th>
+            <th>Conquer</th>
+            <th>Outros</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, s]) => (
+            <tr key={label}>
+              <th>{label}</th>
+              <td>{s.hold}</td>
+              <td>{s.conquer}</td>
+              <td>{s.other}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
+  )
+}
+
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 
 export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAction) => void; onBack: () => void; onAddManual: () => void }) {
@@ -106,6 +139,7 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
   const visible = useMemo(() => (myLegend ? records.filter((r) => r.players[0].legend === myLegend) : records), [records, myLegend])
   const timeline = useMemo(() => winRateTimeline(records, { myLegend }), [records, myLegend])
   const matchup = useMemo(() => matchupMatrix(visible), [visible])
+  const scoring = useMemo(() => scoringStats(records, { myLegend }), [records, myLegend])
 
   return (
     <main className="screen setup stats">
@@ -154,6 +188,59 @@ export function StatsScreen(props: { records: MatchRecord[]; dispatch: (a: AppAc
             <h2>Começando × em segundo</h2>
             <TurnOrderBars first={stats.goingFirst} second={stats.goingSecond} />
           </section>
+
+          {scoring.games > 0 && (
+            <section className="card">
+              <h2>De onde vêm os pontos</h2>
+              <PointsSplitBars
+                rows={[
+                  { label: 'Você', whose: 'dos seus pontos', split: scoring.mine },
+                  { label: 'Oponentes', whose: 'dos pontos dos oponentes', split: scoring.theirs },
+                ]}
+              />
+              <SplitTable
+                rows={[
+                  ['Você', scoring.mine],
+                  ['Oponentes', scoring.theirs],
+                ]}
+              />
+              <p className="hint">
+                {scoring.games} jogo{scoring.games > 1 ? 's' : ''} com o placar de Hold e Conquer. Outros: pontos por efeitos de cartas e por Burn Out do oponente.
+              </p>
+            </section>
+          )}
+
+          {scoring.timedGames > 0 && (
+            <section className="card">
+              <h2>Duração dos jogos</h2>
+              <div className="stat-card wide">
+                <span className="stat-title">Média por jogo</span>
+                <b className="stat-value">{minutes(scoring.avgDurationMs!)}</b>
+                <span className="stat-sub">
+                  {scoring.timedGames} jogo{scoring.timedGames > 1 ? 's' : ''} medido{scoring.timedGames > 1 ? 's' : ''}
+                </span>
+              </div>
+              {scoring.byOpponentLegend.some((r) => r.avgDurationMs !== null) && (
+                <>
+                  <h3>Contra cada lenda</h3>
+                  <ol className="duration-rows">
+                    {scoring.byOpponentLegend
+                      .filter((r) => r.avgDurationMs !== null)
+                      .map((r) => (
+                        <li key={r.key}>
+                          <span>{legendLabel(r.key)}</span>
+                          <b>{minutes(r.avgDurationMs!)}</b>
+                          <small>
+                            {r.games > 0 ? `${share(r.theirs.conquer, splitTotal(r.theirs))} Conquer` : `${r.timedGames} jogo${r.timedGames > 1 ? 's' : ''}`}
+                          </small>
+                        </li>
+                      ))}
+                  </ol>
+                  <p className="hint">Ao lado: quanto dos pontos do oponente com essa lenda veio de Conquer.</p>
+                </>
+              )}
+            </section>
+          )}
 
           {matchup.myLegends.length > 0 && (
             <section className="card">

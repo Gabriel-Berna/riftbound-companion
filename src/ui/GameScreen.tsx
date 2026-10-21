@@ -413,6 +413,8 @@ function MenuSheet(props: {
 
 function GameOver({ match, game, dispatch }: { match: MatchState; game: GameState; dispatch: (a: AppAction) => void }) {
   const result = game.result!
+  // O jogo termina quando o resultado aparece (não quando alguém toca em continuar): é o fim usado na duração.
+  const [endedAt] = useState(() => Date.now())
   // Prévia da partida com este jogo registrado, para saber se ela termina aqui.
   const after = matchReducer(match, { type: 'finishGame' })
   const wins = gameWins(after)
@@ -427,7 +429,7 @@ function GameOver({ match, game, dispatch }: { match: MatchState; game: GameStat
       matchWins={wins}
       matchOver={over}
       champion={champion}
-      onContinue={() => dispatch({ type: 'match', action: { type: 'finishGame' } })}
+      onContinue={() => dispatch({ type: 'match', action: { type: 'finishGame', now: endedAt } })}
       onUndo={() => dispatch({ type: 'undo' })}
     />
   )

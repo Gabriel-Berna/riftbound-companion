@@ -159,6 +159,79 @@ export function isMatchRecord(x: unknown): x is MatchRecord {
   )
 }
 
+/** Pontos por origem, somados em vários jogos. */
+export interface PointsSplit {
+  hold: number
+  conquer: number
+  other: number
+}
+
+export interface ScoringRow {
+  key: string
+  /** Jogos com o placar detalhado. */
+  games: number
+  mine: PointsSplit
+  theirs: PointsSplit
+  /** Jogos com duração medida e a média deles (ms). */
+  timedGames: number
+  avgDurationMs: number | null
+}
+
+export interface ScoringStats extends Omit<ScoringRow, 'key'> {
+  /** Por lenda adversária, das mais enfrentadas às menos. */
+  byOpponentLegend: ScoringRow[]
+}
+
+const emptySplit = (): PointsSplit => ({ hold: 0, conquer: 0, other: 0 })
+
+/** Total de pontos de uma divisão. */
+export const splitTotal = (p: PointsSplit): number => p.hold + p.conquer + p.other
+
+/**
+ * Como os pontos saíram (Hold, Conquer, outros) e quanto duram os jogos, do seu ponto de vista.
+ * Só entram jogos jogados com o placar do app (registros manuais não têm esses dados).
+ */
+export function scoringStats(records: MatchRecord[], filter: StatsFilter = {}): ScoringStats {
+  type Acc = ScoringRow & { totalMs: number }
+  const newAcc = (key: string): Acc => ({ key, games: 0, mine: emptySplit(), theirs: emptySplit(), timedGames: 0, avgDurationMs: null, totalMs: 0 })
+  const total = newAcc('')
+  const byLegend = new Map<string, Acc>()
+
+  const addGame = (acc: Acc, g: CompletedGame) => {
+    if (g.scoring) {
+      acc.games += 1
+      for (const kind of ['hold', 'conquer', 'other'] as const) {
+        acc.mine[kind] += g.scoring[kind][0]
+        acc.theirs[kind] += g.scoring[kind][1]
+      }
+    }
+    if (g.durationMs !== undefined) {
+      acc.timedGames += 1
+      acc.totalMs += g.durationMs
+    }
+  }
+
+  for (const r of records) {
+    if (filter.myLegend && r.players[0].legend !== filter.myLegend) continue
+    const theirs = r.players[1].legend
+    for (const g of r.games) {
+      if (!g.scoring && g.durationMs === undefined) continue
+      addGame(total, g)
+      if (theirs) {
+        if (!byLegend.has(theirs)) byLegend.set(theirs, newAcc(theirs))
+        addGame(byLegend.get(theirs)!, g)
+      }
+    }
+  }
+
+  const finish = ({ totalMs, ...acc }: Acc): ScoringRow => ({ ...acc, avgDurationMs: acc.timedGames ? totalMs / acc.timedGames : null })
+  const { key: _key, ...overall } = finish(total)
+  return {
+    ...overall,
+    byOpponentLegend: [...byLegend.values()].map(finish).sort((a, b) => b.games + b.timedGames - (a.games + a.timedGames) || a.key.localeCompare(b.key)),
+  }
+}
+
 export interface TimelinePoint {
   /** Número do jogo na ordem cronológica (1, 2, 3…). */
   game: number

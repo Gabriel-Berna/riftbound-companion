@@ -2071,6 +2071,172 @@ h3 {
   color: var(--cream);
 }
 
+/* Origem dos pontos: cores categóricas validadas (azul, laranja, água) para o fundo escuro. */
+.split-chart {
+  --src-hold: #3987e5;
+  --src-conquer: #d95926;
+  --src-other: #199e70;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.split-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.split-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.swatch.hold,
+.split-seg.hold {
+  background: var(--src-hold);
+}
+
+.swatch.conquer,
+.split-seg.conquer {
+  background: var(--src-conquer);
+}
+
+.swatch.other,
+.split-seg.other {
+  background: var(--src-other);
+}
+
+.split-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.split-label {
+  font-weight: 700;
+  color: var(--cream);
+}
+
+.split-label small {
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 0.3rem;
+}
+
+/* Partes separadas por 2px do fundo, pontas arredondadas. */
+.split-track {
+  display: flex;
+  gap: 2px;
+  height: 26px;
+}
+
+.split-seg {
+  flex-basis: 0;
+  min-width: 6px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.split-seg:first-child {
+  border-radius: 4px 2px 2px 4px;
+}
+
+.split-seg:last-child {
+  border-radius: 2px 4px 4px 2px;
+}
+
+.split-seg:only-child {
+  border-radius: 4px;
+}
+
+.split-seg.on {
+  outline: 2px solid var(--cream);
+  outline-offset: 1px;
+}
+
+.split-table summary {
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.split-table table {
+  width: 100%;
+  margin-top: 0.4rem;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.split-table th,
+.split-table td {
+  padding: 0.25rem 0.4rem;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.split-table tbody th {
+  text-align: left;
+  color: var(--cream);
+}
+
+.split-table thead th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.duration-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.duration-rows li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.duration-rows li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.duration-rows li b {
+  font-family: var(--display);
+  color: var(--cream);
+}
+
+.duration-rows li small {
+  color: var(--muted);
+  min-width: 4.5rem;
+  text-align: right;
+}
+
 .bar-track {
   grid-area: track;
   position: relative;

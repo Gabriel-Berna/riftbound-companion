@@ -1,5 +1,5 @@
 import { createGame, gameReducer, type GameAction } from './game'
-import type { GameResult, GameState, PlayerIndex } from './types'
+import type { GameResult, GameState, LogEntry, PlayerIndex } from './types'
 
 /** 'duel' = 1v1 Duel, melhor de 1 (CR 487). 'match' = 1v1 Match, melhor de 3 (CR 488). */
 export type MatchFormat = 'duel' | 'match'
@@ -21,6 +21,29 @@ export interface CompletedGame {
   battlefields: [string, string]
   firstPlayer: PlayerIndex
   finalPoints: [number, number]
+  /** De onde vieram os pontos de cada jogador (só em jogos com o placar de Hold e Conquer). */
+  scoring?: ScoreBreakdown
+  /** Duração do jogo em ms (do início até a tela de resultado). */
+  durationMs?: number
+}
+
+/** Pontos de cada jogador por origem: Hold, Conquer e o resto (efeitos de cartas, Burn Out do oponente). */
+export interface ScoreBreakdown {
+  hold: [number, number]
+  conquer: [number, number]
+  other: [number, number]
+}
+
+/** Conta a origem dos pontos pelo histórico; correções com −1 saem do que sobra para "outros". */
+export function scoreBreakdown(log: LogEntry[], finalPoints: [number, number]): ScoreBreakdown {
+  const hold: [number, number] = [0, 0]
+  const conquer: [number, number] = [0, 0]
+  for (const e of log) {
+    if (e.kind === 'hold') hold[e.player] += 1
+    else if (e.kind === 'conquer') conquer[e.player] += 1
+  }
+  const other = [0, 1].map((p) => Math.max(0, finalPoints[p] - hold[p] - conquer[p])) as [number, number]
+  return { hold, conquer, other }
 }
 
 /** Relógio da rodada, baseado no horário real (sobrevive a recarregar o app). */
@@ -62,8 +85,8 @@ export type MatchAction =
   /** O relógio da rodada chegou a zero. */
   | { type: 'timeUp' }
   | { type: 'game'; action: GameAction }
-  /** Registra o resultado do jogo encerrado e libera o próximo. */
-  | { type: 'finishGame' }
+  /** Registra o resultado do jogo encerrado e libera o próximo; `now` é o fim do jogo, para a duração. */
+  | { type: 'finishGame'; now?: number }
 
 export function createMatch(format: MatchFormat, players: [MatchPlayer, MatchPlayer], timerMinutes?: number): MatchState {
   const timer = timerMinutes ? { minutes: timerMinutes, startedAt: null, pausedAt: null, pausedMs: 0 } : null
@@ -121,15 +144,12 @@ export function matchReducer(m: MatchState, a: MatchAction): MatchState {
       if (m.game || isMatchOver(m)) return m
       // O relógio da rodada começa junto com o primeiro jogo.
       const timer = m.timer && m.timer.startedAt === null ? { ...m.timer, startedAt: a.now ?? Date.now() } : m.timer
-      return {
-        ...m,
-        timer,
-        game: createGame({
-          playerNames: [m.players[0].name, m.players[1].name],
-          battlefieldNames: a.battlefieldNames,
-          firstPlayer: a.firstPlayer,
-        }),
-      }
+      const game = createGame({
+        playerNames: [m.players[0].name, m.players[1].name],
+        battlefieldNames: a.battlefieldNames,
+        firstPlayer: a.firstPlayer,
+      })
+      return { ...m, timer, game: a.now === undefined ? game : { ...game, startedAt: a.now } }
     }
 
     case 'pauseTimer':
@@ -152,6 +172,7 @@ export function matchReducer(m: MatchState, a: MatchAction): MatchState {
       const g = m.game
       if (!g?.result) return m
       const battlefields = g.battlefields
+      const finalPoints: [number, number] = [g.players[0].points, g.players[1].points]
       // Battlefields de um jogo com vencedor saem da partida; após empate, podem voltar (CR 488.5–488.5.a).
       const removed: [string[], string[]] =
         g.result.kind === 'win'
@@ -167,7 +188,9 @@ export function matchReducer(m: MatchState, a: MatchAction): MatchState {
             result: g.result,
             battlefields,
             firstPlayer: g.firstPlayer,
-            finalPoints: [g.players[0].points, g.players[1].points],
+            finalPoints,
+            scoring: scoreBreakdown(g.log, finalPoints),
+            ...(g.startedAt !== undefined && a.now !== undefined && { durationMs: Math.max(0, a.now - g.startedAt) }),
           },
         ],
       }
