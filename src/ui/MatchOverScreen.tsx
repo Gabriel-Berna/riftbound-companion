@@ -38,11 +38,18 @@ export function MatchOverScreen(props: {
       <Brand
         title={winner === null ? 'Empate' : <><span className={`c${winner}`}>{name(winner)}</span> venceu!</>}
         subtitle={
-          match.format === 'match' && (
-            <span className="match-score">
-              <span className="c0">{name(0)}</span> {wins[0]} × {wins[1]} <span className="c1">{name(1)}</span>
-            </span>
-          )
+          <>
+            {match.format === 'match' && (
+              <span className="match-score">
+                <span className="c0">{name(0)}</span> {wins[0]} × {wins[1]} <span className="c1">{name(1)}</span>
+              </span>
+            )}
+            {match.timeUp && match.format === 'match' && (
+              <span className="hint match-time-note">
+                Tempo da rodada esgotado: {winner === null ? 'vitórias iguais, a partida empata' : 'vence quem tem mais vitórias'}.
+              </span>
+            )}
+          </>
         }
       />
 
@@ -82,6 +89,7 @@ export function MatchOverScreen(props: {
                 <b>Jogo {i + 1}</b>:{' '}
                 {g.result.kind === 'draw' ? 'empate' : <span className={`c${g.result.winner}`}>{name(g.result.winner)}</span>}
                 {g.result.kind === 'win' && g.result.reason === 'concede' && ' (concessão)'}
+                {g.result.reason === 'time' && ' (fim do tempo)'}
               </div>
               <div className="hint">
                 {g.finalPoints[0]} × {g.finalPoints[1]} · {g.battlefields.join(' e ')} · {name(g.firstPlayer)} começou

@@ -127,7 +127,7 @@ function finishByTime(s: GameState): void {
   const [a, b] = s.players.map((p) => p.points)
   if (a - b >= 2) finish(s, { kind: 'win', winner: 0, reason: 'time' })
   else if (b - a >= 2) finish(s, { kind: 'win', winner: 1, reason: 'time' })
-  else finish(s, { kind: 'draw' })
+  else finish(s, { kind: 'draw', reason: 'time' })
 }
 
 /** Vitória: pontos ≥ Victory Score e mais pontos que o oponente (CR 194.2). Empate acima do alvo continua. */

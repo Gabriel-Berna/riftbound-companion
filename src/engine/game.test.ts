@@ -114,7 +114,7 @@ describe('tempo da rodada (TR 408.2)', () => {
 
   it('com menos de 2 pontos de vantagem, o jogo empata', () => {
     const s = run(withPoints(run(newGame(), { type: 'timeUp' }), 5, 4), { type: 'endByTime' })
-    expect(s.result).toEqual({ kind: 'draw' })
+    expect(s.result).toEqual({ kind: 'draw', reason: 'time' })
   })
 
   it('o jogo ainda pode terminar normalmente durante os turnos extras', () => {

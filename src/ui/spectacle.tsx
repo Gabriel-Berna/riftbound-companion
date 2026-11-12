@@ -131,6 +131,7 @@ export function VictoryScreen(props: {
             )}
           </>
         )}
+        {result.kind === 'draw' && result.reason === 'time' && <span className="victory-reason">no fim do tempo, sem 2 pontos de vantagem</span>}
         <p className="final-score">
           <span className="c0">{game.players[0].points}</span>
           <span className="sep">×</span>

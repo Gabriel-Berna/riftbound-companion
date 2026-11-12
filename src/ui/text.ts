@@ -38,7 +38,7 @@ export function describeLog(g: GameState, e: LogEntry): string {
     case 'time-up':
       return 'Tempo esgotado: terminem o turno e joguem mais 3 turnos'
     case 'result':
-      if (e.result.kind === 'draw') return 'Jogo empatado'
+      if (e.result.kind === 'draw') return e.result.reason === 'time' ? 'Fim dos turnos extras: jogo empatado, sem 2 pontos de vantagem' : 'Jogo empatado'
       if (e.result.reason === 'concede') return `${name(g, e.result.winner === 0 ? 1 : 0)} concedeu: ${name(g, e.result.winner)} vence`
       if (e.result.reason === 'effect') return `${name(g, e.result.winner)} venceu por efeito de carta`
       if (e.result.reason === 'time') return `Fim dos turnos extras: ${name(g, e.result.winner)} vence com 2+ pontos de vantagem`

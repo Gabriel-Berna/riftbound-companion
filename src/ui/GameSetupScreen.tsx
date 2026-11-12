@@ -135,6 +135,17 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
       >
         Começar jogo
       </button>
+      {match.games.length > 0 && (
+        <button
+          className="secondary"
+          onClick={() =>
+            confirm('O tempo da rodada acabou? Nenhum jogo novo começa: vence quem tem mais vitórias e, com vitórias iguais, a partida empata.') &&
+            dispatch({ type: 'match', action: { type: 'timeUp' } })
+          }
+        >
+          ⏱ Tempo esgotado: encerrar a partida
+        </button>
+      )}
       <button className="link" onClick={() => confirm('Abandonar esta partida?') && dispatch({ type: 'quit' })}>
         Abandonar partida
       </button>

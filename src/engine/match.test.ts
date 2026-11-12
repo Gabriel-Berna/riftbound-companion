@@ -157,6 +157,40 @@ describe('relógio da rodada (TR 408)', () => {
   })
 })
 
+describe('fim da partida pelo tempo (TR 404.4, 408.2)', () => {
+  // Melhor de 3 sem o timer do app: o relógio é o do torneio.
+  const oneEach = () => playGame(playGame(newMatch(), ['A1', 'B1'], 0, 0), ['A2', 'B2'], 1, 1)
+  const g = (action: object) => ({ type: 'game', action }) as MatchAction
+
+  it('1 vitória para cada e o terceiro jogo empatado no tempo: a partida termina empatada', () => {
+    let m = run(oneEach(), { type: 'startGame', battlefieldNames: ['A3', 'B3'], firstPlayer: 0 }, { type: 'timeUp' })
+    m = run(m, g({ type: 'adjustPoints', player: 0, delta: 5 }), g({ type: 'adjustPoints', player: 1, delta: 4 }), g({ type: 'endByTime' }), { type: 'finishGame' })
+    expect(m.games[2].result).toEqual({ kind: 'draw', reason: 'time' })
+    expect(isMatchOver(m)).toBe(true)
+    expect(matchWinner(m)).toBeNull()
+    expect(gameWins(m)).toEqual([1, 1])
+  })
+
+  it('um jogo vencido por vantagem no fim do tempo também encerra a partida', () => {
+    let m = run(playGame(newMatch(), ['A1', 'B1'], 0, 1), { type: 'startGame', battlefieldNames: ['A2', 'B2'], firstPlayer: 0 }, { type: 'timeUp' })
+    m = run(m, g({ type: 'adjustPoints', player: 0, delta: 6 }), g({ type: 'endByTime' }), { type: 'finishGame' })
+    expect(isMatchOver(m)).toBe(true)
+    expect(gameWins(m)).toEqual([1, 1])
+    expect(matchWinner(m)).toBeNull()
+  })
+
+  it('um empate comum (sem ser pelo tempo) não encerra a melhor de 3', () => {
+    const m = playGame(oneEach(), ['A3', 'B3'], 0, 'draw')
+    expect(isMatchOver(m)).toBe(false)
+  })
+
+  it('o tempo do torneio acabando entre jogos encerra a partida (TR 408.2.d)', () => {
+    const m = run(oneEach(), { type: 'timeUp' })
+    expect(isMatchOver(m)).toBe(true)
+    expect(matchWinner(m)).toBeNull()
+  })
+})
+
 describe('melhor de 1 (CR 487)', () => {
   it('termina após um jogo, mesmo empatado', () => {
     const m = playGame(newMatch('duel'), ['A1', 'B1'], 0, 'draw')

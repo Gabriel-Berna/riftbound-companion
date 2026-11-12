@@ -12,7 +12,8 @@ export interface PlayerState {
 
 export type GameResult =
   | { kind: 'win'; winner: PlayerIndex; reason: 'points' | 'concede' | 'effect' | 'time' }
-  | { kind: 'draw' }
+  /** `reason: 'time'`: empate decidido no fim dos turnos extras (TR 408.2.b). */
+  | { kind: 'draw'; reason?: 'time' }
 
 /** Como o ponto veio: segurando (Hold) ou conquistando (Conquer) um battlefield (CR 471). */
 export type ScoreKind = 'hold' | 'conquer'

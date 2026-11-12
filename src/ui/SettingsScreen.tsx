@@ -6,7 +6,7 @@ import { ArtPicker, LegendPicker, LegendTile } from './cards'
 import { Brand } from './common'
 
 const SETTING_LABELS: [keyof Settings, string, string][] = [
-  ['sound', 'Sons', 'Ao pontuar, passar a vez e vencer.'],
+  ['sound', 'Sons', 'Ao pontuar (Hold e Conquer soam diferente) e ao vencer.'],
   ['vibration', 'Vibração', 'Vibra ao pontuar (Android).'],
   ['keepAwake', 'Tela sempre ligada', 'Durante a partida, a tela não apaga.'],
 ]

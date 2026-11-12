@@ -3795,3 +3795,9 @@ h3 {
   background: rgba(15, 33, 41, 0.6);
   opacity: 0.75;
 }
+
+.match-time-note {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+}

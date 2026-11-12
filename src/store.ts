@@ -6,7 +6,7 @@ import { migrateGame } from './engine/game'
 import { mergeRecords, recordFromMatch, type MatchRecord } from './engine/stats'
 
 export interface Settings {
-  /** Sons ao pontuar, passar a vez e vencer (desligado por padrão). */
+  /** Sons ao pontuar e ao vencer (desligado por padrão). */
   sound: boolean
   /** Vibração curta ao pontuar (Android). */
   vibration: boolean

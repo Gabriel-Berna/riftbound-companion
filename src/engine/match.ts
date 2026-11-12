@@ -85,7 +85,7 @@ export type MatchAction =
   | { type: 'startGame'; battlefieldNames: [string, string]; firstPlayer: PlayerIndex; now?: number }
   | { type: 'pauseTimer'; now: number }
   | { type: 'resumeTimer'; now: number }
-  /** O relógio da rodada chegou a zero. */
+  /** O tempo da rodada acabou (no timer do app ou no relógio do torneio). */
   | { type: 'timeUp' }
   | { type: 'game'; action: GameAction }
   /** Registra o resultado do jogo encerrado e libera o próximo; `now` é o fim do jogo, para a duração. */
@@ -181,9 +181,12 @@ export function matchReducer(m: MatchState, a: MatchAction): MatchState {
         g.result.kind === 'win'
           ? [[...m.removed[0], battlefields[0]], [...m.removed[1], battlefields[1]]]
           : m.removed
+      // Jogo decidido no fim do tempo: depois dos turnos extras, a partida termina (TR 408.2.a).
+      const byTime = (g.result.kind === 'win' || g.result.kind === 'draw') && g.result.reason === 'time'
       return {
         ...m,
         game: null,
+        timeUp: m.timeUp || byTime,
         removed,
         games: [
           ...m.games,

@@ -399,8 +399,22 @@ function MenuSheet(props: {
           <b>{props.state.tableMode ? 'Não girar' : 'Girar'} o placar do oponente</b>
           <small>Para quem joga frente a frente com o celular no meio da mesa.</small>
         </button>
-        <button className="action" onClick={close(() => confirm('Declarar o jogo empatado?') && act({ type: 'declareDraw' }))}>
-          <b>Declarar empate</b>
+        {!props.match.timeUp && (
+          <button
+            className="action"
+            onClick={close(
+              () =>
+                confirm('O tempo da rodada acabou? Terminem o turno e joguem mais 3 turnos; depois, o jogo (e a partida) termina.') &&
+                props.dispatch({ type: 'match', action: { type: 'timeUp' } }),
+            )}
+          >
+            <b>⏱ O tempo da rodada acabou</b>
+            <small>Para o relógio do torneio. O app avisa dos 3 turnos extras e encerra a partida depois deles.</small>
+          </button>
+        )}
+        <button className="action" onClick={close(() => confirm('Declarar este jogo empatado? A partida continua.') && act({ type: 'declareDraw' }))}>
+          <b>Declarar empate neste jogo</b>
+          <small>Empate de comum acordo. Se foi pelo tempo da rodada, use o botão acima.</small>
         </button>
         <button className="action danger" onClick={close(() => confirm('Abandonar a partida inteira?') && props.dispatch({ type: 'quit' }))}>
           <b>Abandonar partida</b>
