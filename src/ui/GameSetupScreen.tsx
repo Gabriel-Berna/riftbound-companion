@@ -5,6 +5,8 @@ import type { AppAction } from '../store'
 import { BattlefieldTile } from './cards'
 import { Brand } from './common'
 import { CoinFlip } from './spectacle'
+import { TopsBattle } from './TopsBattle'
+import { findLegend } from '../data/cards'
 import { RoundClock } from './timer'
 
 const pick = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)]
@@ -21,6 +23,8 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
   const [decider, setDecider] = useState<PlayerIndex | null>(rule.kind === 'chooser' ? rule.player : null)
   const [firstPlayer, setFirstPlayer] = useState<PlayerIndex | null>(rule.kind === 'fixed' ? rule.firstPlayer : null)
   const [coinFlipping, setCoinFlipping] = useState(false)
+  const [battling, setBattling] = useState(false)
+  const [byTops, setByTops] = useState(false)
   const onCoinResult = useCallback((p: PlayerIndex) => setDecider(p), [])
 
   const name = (p: PlayerIndex) => match.players[p].name
@@ -90,15 +94,20 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
             {coinFlipping && <CoinFlip names={[name(0), name(1)]} onResult={onCoinResult} />}
             {decider === null ? (
               !coinFlipping && (
-                <button className="secondary" onClick={() => setCoinFlipping(true)}>
-                  🪙 Sortear quem decide
-                </button>
+                <div className="draw-methods">
+                  <button className="secondary" onClick={() => setCoinFlipping(true)}>
+                    🪙 Sortear quem decide
+                  </button>
+                  <button className="secondary" onClick={() => setBattling(true)}>
+                    🌀 Batalha de piões
+                  </button>
+                </div>
               )
             ) : (
               <>
                 <p>
                   <b className={`c${decider}`}>{name(decider)}</b>{' '}
-                  {rule.kind === 'chooser' ? 'perdeu o último jogo e decide:' : 'foi sorteado e decide:'}
+                  {rule.kind === 'chooser' ? 'perdeu o último jogo e decide:' : byTops ? 'venceu a batalha de piões e decide:' : 'foi sorteado e decide:'}
                 </p>
                 <div className="segmented">
                   {([0, 1] as const).map((p) => (
@@ -115,6 +124,19 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
           </>
         )}
       </section>
+
+      {battling && (
+        <TopsBattle
+          names={[name(0), name(1)]}
+          legendDomains={[findLegend(match.players[0].legend)?.domains, findLegend(match.players[1].legend)?.domains]}
+          onResult={(p) => {
+            setDecider(p)
+            setByTops(true)
+            setBattling(false)
+          }}
+          onCancel={() => setBattling(false)}
+        />
+      )}
 
       <section className="card checklist">
         <h2>Antes de começar</h2>

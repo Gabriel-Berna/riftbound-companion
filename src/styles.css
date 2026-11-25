@@ -3801,3 +3801,177 @@ h3 {
   margin-top: 0.3rem;
   font-size: 0.85rem;
 }
+
+/* ---------- Batalha de piões ---------- */
+
+.draw-methods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.tops-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: radial-gradient(ellipse at 50% 40%, #12323d, var(--bg-0) 75%);
+  overflow-y: auto;
+}
+
+.tops-pick,
+.tops-arena {
+  width: min(100%, 420px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.tops-pick h2 {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  color: var(--cream);
+  text-align: center;
+}
+
+.tops-pick .hint {
+  text-align: center;
+  margin: 0;
+}
+
+.tops-player {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background: rgba(15, 33, 41, 0.85);
+  border: 1px solid var(--line);
+}
+
+.tops-player b {
+  font-family: var(--display);
+  font-size: 1.1rem;
+}
+
+.tops-swatches {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.tops-swatch {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s;
+}
+
+.tops-swatch.on {
+  border-color: var(--cream);
+  transform: scale(1.12);
+  box-shadow:
+    inset 0 0 0 2px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(249, 237, 220, 0.45);
+}
+
+.tops-swatch:disabled {
+  opacity: 0.2;
+}
+
+.tops-arena {
+  align-items: center;
+}
+
+.tops-names {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-weight: 700;
+  color: var(--cream);
+}
+
+.tops-names span,
+.tops-winner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.tops-names i,
+.tops-winner i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--cream);
+}
+
+.tops-stage {
+  position: relative;
+}
+
+.tops-count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 4.5rem;
+  color: var(--cream);
+  text-shadow:
+    0 0 24px rgba(239, 125, 0, 0.8),
+    0 2px 8px rgba(0, 0, 0, 0.8);
+  animation: count-pop 0.65s ease-out;
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.tops-result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  animation: result-in 0.3s ease-out;
+}
+
+@keyframes result-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.tops-winner {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  color: var(--cream);
+}
+
+.tops-result small {
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.tops-result .primary {
+  width: 100%;
+}

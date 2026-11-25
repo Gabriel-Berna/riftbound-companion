@@ -15,6 +15,7 @@ PWA (React + TypeScript + Vite) de apoio a partidas do TCG Riftbound. Interface 
 - Testes no navegador começam pela introdução de primeiro uso: depois de limpar o localStorage, clicar em "Pular".
 - Estatísticas (`src/engine/stats.ts`): `players[0]` de cada registro é sempre o dono do celular (Jogador 1). Cada jogo guarda `scoring` (pontos por Hold, Conquer e outros) e `durationMs` (do início até a tela de resultado).
 - Eventos (`src/engine/events.ts`) ficam em `riftbound-companion/events/v1`; a partida aponta para o evento por `eventId` e `round`. Apagar um evento não apaga partidas: só tira o vínculo.
+- Batalha de piões (`src/engine/tops.ts`, tela em `src/ui/TopsBattle.tsx`): sorteio de quem escolhe começar (TR 407.2). Qualquer ajuste na física precisa manter o teste de justiça (cada lado vence ~50%): calcular algo de um pião depois de alterar o outro no mesmo passo já criou viés.
 - Regras oficiais: `docs/regras-riftbound.md` (resumo) e `docs/fontes/` (textos completos, pesquisáveis com grep).
 - Comandos: `npm test`, `npm run build` (inclui `tsc -b`).
 - Nos testes, loops que pontuam precisam parar quando o jogo termina (`state.result`): depois do resultado o reducer ignora as ações e o loop nunca acaba, travando o Vitest sem mensagem.
