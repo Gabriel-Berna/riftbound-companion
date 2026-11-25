@@ -26,6 +26,17 @@ describe('batalha de piões (sorteio de quem escolhe começar, TR 407.2)', () =>
     expect(times[Math.floor(times.length / 2)]).toBeLessThan(9)
   })
 
+  it('o mais comum é ser arremessado para fora (parede baixa)', () => {
+    const ringOuts = battles.filter((b) => b.end === 'ring-out').length / battles.length
+    expect(ringOuts).toBeGreaterThan(0.5)
+  })
+
+  it('quando um pião para, o vencedor ainda está girando de forma visível', () => {
+    const spinOuts = battles.filter((b) => b.end === 'spin-out')
+    const clear = spinOuts.filter((b) => b.tops[b.winner!].spin >= 0.05).length / spinOuts.length
+    expect(clear).toBeGreaterThan(0.75)
+  })
+
   it('a mesma semente repete a mesma batalha', () => {
     expect(runBattle(42)).toEqual(runBattle(42))
   })

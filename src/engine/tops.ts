@@ -3,8 +3,9 @@ import type { PlayerIndex } from './types'
 /**
  * Batalha de piões para decidir quem escolhe começar o primeiro jogo (alternativa à moeda, TR 407.2:
  * vale qualquer método aleatório aceito pelos jogadores). Física simples num estádio circular de raio 1:
- * a rampa em cone puxa os piões para o centro, o giro os faz circular, os choques empurram e gastam giro.
- * Perde quem sair pela abertura da borda ou parar de girar. As condições iniciais são sorteadas do mesmo
+ * a rampa em cone puxa os piões para o centro (perto da borda o estádio é quase plano e a parede é baixa),
+ * o giro os faz circular, os choques empurram e gastam giro. Perde quem for arremessado para fora (mais fácil
+ * pelas aberturas da borda) ou parar de girar. As condições iniciais são sorteadas do mesmo
  * jeito para os dois lados, então a chance de cada um é a mesma.
  */
 
@@ -15,6 +16,8 @@ export interface Top {
   vy: number
   /** Giro restante, de 1 (lançado) a 0 (parado). */
   spin: number
+  /** Ritmo com que perde giro (sorteado no lançamento, 0,75 a 1,25): uns piões aguentam mais que outros. */
+  stamina: number
   /** Ângulo de rotação, só para o desenho. */
   angle: number
   /** Saiu do estádio. */
@@ -36,18 +39,34 @@ export interface Battle {
 export const TOP_RADIUS = 0.13
 /** Aberturas na borda do estádio (ângulos em radianos) e a meia largura de cada uma. */
 export const POCKETS = [Math.PI / 2, Math.PI / 2 + (2 * Math.PI) / 3, Math.PI / 2 + (4 * Math.PI) / 3]
-export const POCKET_HALF_WIDTH = 0.3
+export const POCKET_HALF_WIDTH = 0.38
+/** Velocidade mínima de lançamento (mais um sorteio de até 0,4). */
+const LAUNCH_SPEED = 0.3
 /** Depois disso, vence quem tiver mais giro. */
 export const MAX_TIME = 14
 
-const SLOPE = 2.0
+const SLOPE = 1.8
 const ORBIT = 0.2
 const DRAG = 0.5
-const SPIN_DECAY = 0.07
-/** Velocidade para fora necessária para escapar por uma abertura. */
-const ESCAPE_SPEED = 0.8
+const SPIN_DECAY = 0.06
+/** Velocidade para fora abaixo da qual a batida na parede nunca tira o pião do estádio. */
+const ESCAPE_SPEED = 0.3
+/** Chance de sair por unidade de velocidade acima disso, na parede; nas aberturas, vezes POCKET_BONUS. */
+const WALL_ESCAPE = 0.6
+const POCKET_BONUS = 3
+/** A partir desse raio, a rampa vale só FLAT_SLOPE da inclinação do centro. */
+const FLAT_FROM = 0.5
+const FLAT_SLOPE = 0.3
+/** Força do empurrão num choque. */
+const KICK = 0.8
+/** Giro perdido num choque: mínimo e parte sorteada (vezes o giro de quem bateu). */
+const HIT_DRAIN = 0.08
+const HIT_DRAIN_RANDOM = 0.12
 /** Logo depois do lançamento ninguém sai do estádio: a batalha precisa acontecer. */
-const GRACE = 2.5
+const GRACE = 1.5
+
+/** Velocidade de rotação desenhada (rad/s): de 1,5 (quase parado) a 14,5 (lançado). */
+export const visualSpinSpeed = (spin: number): number => (spin > 0 ? 1.5 + 13 * spin : 0)
 
 /** Gerador pseudoaleatório com semente (mulberry32): a mesma semente dá a mesma batalha. */
 export function seededRandom(seed: number): () => number {
@@ -66,11 +85,11 @@ export function launch(random: () => number): Battle {
   const base = random() * Math.PI * 2
   const top = (side: number): Top => {
     const a = base + side * Math.PI + (random() - 0.5) * 0.6
-    const r = 0.55 + random() * 0.2
-    const speed = 0.8 + random() * 0.6
+    const r = 0.35 + random() * 0.15
+    const speed = LAUNCH_SPEED + random() * 0.4
     // Lançado meio de lado, em direção ao centro: os dois se cruzam logo.
     const dir = a + Math.PI + (random() - 0.5) * 0.7
-    return { x: Math.cos(a) * r, y: Math.sin(a) * r, vx: Math.cos(dir) * speed, vy: Math.sin(dir) * speed, spin: 0.85 + random() * 0.15, angle: 0, out: false }
+    return { x: Math.cos(a) * r, y: Math.sin(a) * r, vx: Math.cos(dir) * speed, vy: Math.sin(dir) * speed, spin: 0.85 + random() * 0.15, stamina: 0.75 + random() * 0.5, angle: 0, out: false }
   }
   return { tops: [top(0), top(1)], time: 0, hits: [], winner: null, end: null }
 }
@@ -90,7 +109,8 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
     // Rampa para o centro, giro que faz o pião circular e um tremor leve; piões fracos perdem força.
     const strength = 0.35 + 0.65 * t.spin
     // Estádio em cone (inclinação constante): piões com giros diferentes dão voltas em tempos diferentes e se alcançam.
-    const pull = SLOPE / Math.max(r, 0.2)
+    // Perto da borda o estádio é quase plano: um pião empurrado para lá desliza até a parede.
+    const pull = (r < FLAT_FROM ? SLOPE : SLOPE * FLAT_SLOPE) / Math.max(r, 0.2)
     t.vx += (-pull * t.x - ORBIT * strength * (t.y / r) + (random() - 0.5) * 0.8) * dt
     t.vy += (-pull * t.y + ORBIT * strength * (t.x / r) + (random() - 0.5) * 0.8) * dt
     const drag = 1 - DRAG * dt
@@ -98,8 +118,10 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
     t.vy *= drag
     t.x += t.vx * dt
     t.y += t.vy * dt
-    t.angle += (6 + 30 * t.spin) * dt
-    t.spin = Math.max(0, t.spin - (SPIN_DECAY + 0.02 * Math.hypot(t.vx, t.vy)) * dt)
+    // Rotação desenhada: proporcional ao giro e lenta o bastante para não parecer parada a 60 quadros por segundo
+    // (com 3 lâminas, acima de ~1 rad por quadro o olho vê o pião girando devagar ou para trás).
+    t.angle += visualSpinSpeed(t.spin) * dt
+    t.spin = Math.max(0, t.spin - t.stamina * (SPIN_DECAY + 0.02 * Math.hypot(t.vx, t.vy)) * dt)
 
     // Borda: escapa pela abertura com velocidade para fora suficiente; senão, quica na parede.
     const dist = Math.hypot(t.x, t.y)
@@ -107,7 +129,11 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
       const nx = t.x / dist
       const ny = t.y / dist
       const outward = t.vx * nx + t.vy * ny
-      if (b.time > GRACE && inPocket(Math.atan2(t.y, t.x)) && outward > ESCAPE_SPEED) {
+      // Parede baixa: cada batida forte pode jogar o pião para fora; nas aberturas, bem mais fácil.
+      // Depois do lançamento, a chance de sair cresce aos poucos (nada nos primeiros GRACE segundos).
+      const warmup = Math.min(1, Math.max(0, (b.time - GRACE) / GRACE))
+      const chance = warmup * WALL_ESCAPE * Math.max(0, outward - ESCAPE_SPEED) * (inPocket(Math.atan2(t.y, t.x)) ? POCKET_BONUS : 1)
+      if (random() < chance) {
         t.out = true
         continue
       }
@@ -135,16 +161,17 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
     c.y += (ny * overlap) / 2
     const closing = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny
     if (closing > 0) {
-      const kickA = (0.5 + random()) * (0.4 + c.spin)
-      const kickC = (0.5 + random()) * (0.4 + a.spin)
+      // O empurrão cresce pouco com o giro: assim o pião ainda pode ser arremessado no fim da batalha.
+      const kickA = KICK * (0.5 + random()) * (0.7 + 0.3 * c.spin)
+      const kickC = KICK * (0.5 + random()) * (0.7 + 0.3 * a.spin)
       a.vx -= nx * (closing + kickA)
       a.vy -= ny * (closing + kickA)
       c.vx += nx * (closing + kickC)
       c.vy += ny * (closing + kickC)
       // As duas perdas usam o giro de antes do choque: calcular uma depois da outra favoreceria um lado.
       const [spinA, spinC] = [a.spin, c.spin]
-      a.spin = Math.max(0, spinA - (0.04 + 0.1 * random()) * spinC)
-      c.spin = Math.max(0, spinC - (0.04 + 0.1 * random()) * spinA)
+      a.spin = Math.max(0, spinA - (HIT_DRAIN + HIT_DRAIN_RANDOM * random()) * spinC)
+      c.spin = Math.max(0, spinC - (HIT_DRAIN + HIT_DRAIN_RANDOM * random()) * spinA)
       hits.push({ x: (a.x + c.x) / 2, y: (a.y + c.y) / 2, power: closing })
     }
   }

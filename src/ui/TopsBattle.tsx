@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { launch, POCKET_HALF_WIDTH, POCKETS, runBattle, seededRandom, step, TOP_RADIUS, type Battle, type BattleEnd } from '../engine/tops'
+import { launch, POCKET_HALF_WIDTH, POCKETS, runBattle, seededRandom, step, TOP_RADIUS, visualSpinSpeed, type Battle, type BattleEnd } from '../engine/tops'
 import { DOMAINS, type Domain, type PlayerIndex } from '../engine/types'
 import { DOMAIN_COLORS, POWER_LABELS } from './text'
 
 type Phase = 'pick' | 'countdown' | 'battle' | 'done'
 
 const DT = 1 / 60
+/** Depois do resultado, por quanto tempo o vencedor continua girando antes do placar (s). */
+const FINALE = 1.4
 const END_TEXT: Record<BattleEnd, (loser: string) => string> = {
   'ring-out': (loser) => `O pião de ${loser} foi arremessado para fora do estádio`,
   'spin-out': (loser) => `O pião de ${loser} parou de girar`,
@@ -20,11 +22,21 @@ interface Spark {
   life: number
 }
 
+/** Como desenhar o perdedor depois do resultado: parado (tombado) ou voando para fora do estádio. */
+interface Finale {
+  loser: PlayerIndex
+  /** Posição do pião arremessado, que segue em frente para fora da borda. */
+  fly?: { x: number; y: number }
+  /** 0 no resultado, 1 no fim do encerramento. */
+  t: number
+}
+
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 /** Desenha o estádio, os piões e as faíscas. Coordenadas da batalha: estádio de raio 1 no centro. */
-function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [string, string], sparks: Spark[]) {
-  const R = size / 2 - 6
+function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [string, string], sparks: Spark[], finale?: Finale) {
+  // Margem em volta do estádio, para ver o pião arremessado saindo.
+  const R = size * 0.4
   const cx = size / 2
   const cy = size / 2
   ctx.clearRect(0, 0, size, size)
@@ -47,7 +59,7 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
   }
 
   // Borda dourada, interrompida nas aberturas (por onde se perde por ring-out).
-  ctx.lineWidth = 5
+  ctx.lineWidth = 3
   ctx.strokeStyle = '#c8aa6e'
   ctx.shadowColor = 'rgba(200, 170, 110, 0.6)'
   ctx.shadowBlur = 8
@@ -68,18 +80,32 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
   }
 
   b.tops.forEach((t, i) => {
-    if (t.out) return
     const r = TOP_RADIUS * R
+    const flying = t.out && finale?.loser === i && finale.fly
+    if (t.out && !flying) return
+    // Perdedor parado: tomba (achatado), cinza e sem girar.
+    const stopped = !t.out && t.spin <= 0
     // Pião fraco bambeia antes de parar.
-    const wobble = t.spin < 0.3 ? (0.3 - t.spin) * r * 0.6 : 0
-    const x = cx + t.x * R + Math.sin(b.time * 23 + i) * wobble
-    const y = cy + t.y * R + Math.cos(b.time * 19 + i) * wobble
+    const wobble = !stopped && t.spin < 0.3 ? (0.3 - t.spin) * r * 0.6 : 0
+    const px = flying ? finale.fly!.x : t.x
+    const py = flying ? finale.fly!.y : t.y
+    const x = cx + px * R + Math.sin(b.time * 23 + i) * wobble
+    const y = cy + py * R + Math.cos(b.time * 19 + i) * wobble
     ctx.save()
     ctx.translate(x, y)
+    if (flying) {
+      ctx.globalAlpha = Math.max(0, 1 - finale.t * 1.3)
+      ctx.scale(1 - finale.t * 0.4, 1 - finale.t * 0.4)
+    }
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
     ctx.beginPath()
     ctx.ellipse(3, 4, r, r * 0.9, 0, 0, Math.PI * 2)
     ctx.fill()
+    if (stopped) {
+      ctx.rotate(0.5)
+      ctx.scale(1, 0.62)
+      ctx.filter = 'grayscale(0.75) brightness(0.7)'
+    }
     ctx.rotate(t.angle)
     // Três lâminas na cor escolhida, com contorno claro.
     ctx.fillStyle = colors[i]
@@ -141,7 +167,9 @@ export function TopsBattle(props: {
   const [count, setCount] = useState(3)
   const [result, setResult] = useState<Battle | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
-  const [size] = useState(() => Math.min(380, Math.round(window.innerWidth * 0.9)))
+  // Medidores de giro atualizados direto no DOM a cada quadro, sem re-renderizar a tela.
+  const meters = [useRef<HTMLElement>(null), useRef<HTMLElement>(null)] as const
+  const [size] = useState(() => Math.min(420, Math.round(window.innerWidth * 0.98)))
   const hex: [string, string] = [DOMAIN_COLORS[colors[0]], DOMAIN_COLORS[colors[1]]]
 
   // Contagem regressiva: 3, 2, 1, lançar.
@@ -170,14 +198,23 @@ export function TopsBattle(props: {
       draw(ctx, size, { ...b, tops: [{ ...b.tops[0], x: -0.6, y: 0 }, { ...b.tops[1], x: 0.6, y: 0 }] }, hex, [])
       return
     }
+    const showSpin = (battle: Battle) =>
+      battle.tops.forEach((t, i) => {
+        const el = meters[i].current
+        if (!el) return
+        el.style.width = `${Math.round((t.out ? 0 : t.spin) * 100)}%`
+        el.parentElement!.classList.toggle('low', !t.out && t.spin < 0.25)
+      })
     if (reducedMotion()) {
       const final = runBattle(Math.floor(Math.random() * 2 ** 31))
       draw(ctx, size, final, hex, [])
+      showSpin(final)
       setResult(final)
       setPhase('done')
       return
     }
     let sparks: Spark[] = []
+    let finale: (Finale & { vx: number; vy: number }) | null = null
     let frame = 0
     let last = performance.now()
     let acc = 0
@@ -196,10 +233,26 @@ export function TopsBattle(props: {
         if (b.hits.length) navigator.vibrate?.(20)
       }
       sparks = sparks.map((s) => ({ ...s, x: s.x + s.vx * DT, y: s.y + s.vy * DT, life: s.life - 2 * DT })).filter((s) => s.life > 0)
-      draw(ctx, size, b, hex, sparks)
+
+      // Encerramento: o vencedor segue girando; o perdedor fica parado ou sai voando pela borda.
       if (b.winner !== null) {
-        setResult(b)
-        setTimeout(() => setPhase('done'), 600)
+        const loser: PlayerIndex = b.winner === 0 ? 1 : 0
+        if (!finale) {
+          const l = b.tops[loser]
+          const speed = Math.max(1.2, Math.hypot(l.vx, l.vy))
+          const dir = Math.atan2(l.y, l.x)
+          finale = { loser, t: 0, fly: l.out ? { x: l.x, y: l.y } : undefined, vx: Math.cos(dir) * speed, vy: Math.sin(dir) * speed }
+          setResult(b)
+        }
+        finale.t = Math.min(1, finale.t + DT / FINALE)
+        if (finale.fly) finale.fly = { x: finale.fly.x + finale.vx * DT, y: finale.fly.y + finale.vy * DT }
+        const w = b.tops[b.winner]
+        b = { ...b, time: b.time + DT, tops: b.tops.map((t, i) => (i === b.winner ? { ...w, angle: w.angle + visualSpinSpeed(w.spin) * DT } : t)) as Battle['tops'] }
+      }
+      draw(ctx, size, b, hex, sparks, finale ?? undefined)
+      showSpin(b)
+      if (finale && finale.t >= 1) {
+        setPhase('done')
         return
       }
       frame = requestAnimationFrame(tick)
@@ -251,9 +304,14 @@ export function TopsBattle(props: {
         <div className="tops-arena">
           <div className="tops-names">
             {([0, 1] as const).map((p) => (
-              <span key={p}>
-                <i style={{ background: hex[p] }} /> {props.names[p]}
-              </span>
+              <div key={p} className="tops-gauge">
+                <span>
+                  <i style={{ background: hex[p] }} /> {props.names[p]}
+                </span>
+                <span className="tops-meter" role="img" aria-label={`Giro do pião de ${props.names[p]}`}>
+                  <b ref={meters[p]} style={{ background: hex[p], width: '100%' }} />
+                </span>
+              </div>
             ))}
           </div>
           <div className="tops-stage" style={{ width: size, height: size }}>
