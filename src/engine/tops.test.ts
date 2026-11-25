@@ -17,13 +17,14 @@ describe('batalha de piões (sorteio de quem escolhe começar, TR 407.2)', () =>
     expect(wins0).toBeLessThan(0.55)
   })
 
-  it('termina de formas variadas e, em geral, em poucos segundos', () => {
+  it('termina de formas variadas e dura uns 8 segundos', () => {
     const ends = new Set(battles.map((b) => b.end))
     expect(ends.has('ring-out')).toBe(true)
     expect(ends.has('spin-out') || ends.has('time')).toBe(true)
     const times = battles.map((b) => b.time).sort((x, y) => x - y)
-    expect(times[Math.floor(times.length / 2)]).toBeGreaterThan(2)
-    expect(times[Math.floor(times.length / 2)]).toBeLessThan(9)
+    // Batalhas de uns 8 segundos: tempo para emocionar sem atrasar a partida.
+    expect(times[Math.floor(times.length / 2)]).toBeGreaterThan(6)
+    expect(times[Math.floor(times.length / 2)]).toBeLessThan(10)
   })
 
   it('o mais comum é ser arremessado para fora (parede baixa)', () => {

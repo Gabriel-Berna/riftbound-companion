@@ -3901,51 +3901,7 @@ h3 {
   gap: 1rem;
 }
 
-.tops-gauge {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 0;
-}
-
-.tops-gauge:last-child {
-  align-items: flex-end;
-}
-
-/* Medidor de giro: esvazia conforme o pião perde força; pisca quando está quase parando. */
-.tops-meter {
-  display: block;
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  background: rgba(6, 16, 20, 0.8);
-  border: 1px solid var(--line);
-  overflow: hidden;
-}
-
-.tops-gauge:last-child .tops-meter {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.tops-meter b {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-}
-
-.tops-meter.low b {
-  animation: meter-blink 0.5s steps(2) infinite;
-}
-
-@keyframes meter-blink {
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.tops-gauge > span:first-child,
+.tops-gauge,
 .tops-winner {
   display: inline-flex;
   align-items: center;

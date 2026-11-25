@@ -43,30 +43,30 @@ export const POCKET_HALF_WIDTH = 0.38
 /** Velocidade mínima de lançamento (mais um sorteio de até 0,4). */
 const LAUNCH_SPEED = 0.3
 /** Depois disso, vence quem tiver mais giro. */
-export const MAX_TIME = 14
+export const MAX_TIME = 20
 
 const SLOPE = 1.8
 const ORBIT = 0.2
 const DRAG = 0.5
-const SPIN_DECAY = 0.06
+const SPIN_DECAY = 0.04
 /** Velocidade para fora abaixo da qual a batida na parede nunca tira o pião do estádio. */
 const ESCAPE_SPEED = 0.3
 /** Chance de sair por unidade de velocidade acima disso, na parede; nas aberturas, vezes POCKET_BONUS. */
-const WALL_ESCAPE = 0.6
-const POCKET_BONUS = 3
+const WALL_ESCAPE = 0.5
+const POCKET_BONUS = 4
 /** A partir desse raio, a rampa vale só FLAT_SLOPE da inclinação do centro. */
 const FLAT_FROM = 0.5
 const FLAT_SLOPE = 0.3
 /** Força do empurrão num choque. */
-const KICK = 0.8
+const KICK = 1.0
 /** Giro perdido num choque: mínimo e parte sorteada (vezes o giro de quem bateu). */
-const HIT_DRAIN = 0.08
+const HIT_DRAIN = 0.06
 const HIT_DRAIN_RANDOM = 0.12
 /** Logo depois do lançamento ninguém sai do estádio: a batalha precisa acontecer. */
-const GRACE = 1.5
+const GRACE = 3
 
-/** Velocidade de rotação desenhada (rad/s): de 1,5 (quase parado) a 14,5 (lançado). */
-export const visualSpinSpeed = (spin: number): number => (spin > 0 ? 1.5 + 13 * spin : 0)
+/** Velocidade de rotação desenhada (rad/s): de 2 (quase parado) a ~62 (lançado, uns 10 giros por segundo). */
+export const visualSpinSpeed = (spin: number): number => (spin > 0 ? 2 + 60 * spin : 0)
 
 /** Gerador pseudoaleatório com semente (mulberry32): a mesma semente dá a mesma batalha. */
 export function seededRandom(seed: number): () => number {
@@ -118,8 +118,7 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
     t.vy *= drag
     t.x += t.vx * dt
     t.y += t.vy * dt
-    // Rotação desenhada: proporcional ao giro e lenta o bastante para não parecer parada a 60 quadros por segundo
-    // (com 3 lâminas, acima de ~1 rad por quadro o olho vê o pião girando devagar ou para trás).
+    // Rotação só para o desenho, que usa borrão de movimento para não parecer parada a 60 quadros por segundo.
     t.angle += visualSpinSpeed(t.spin) * dt
     t.spin = Math.max(0, t.spin - t.stamina * (SPIN_DECAY + 0.02 * Math.hypot(t.vx, t.vy)) * dt)
 

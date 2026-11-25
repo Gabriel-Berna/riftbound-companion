@@ -106,21 +106,39 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
       ctx.scale(1, 0.62)
       ctx.filter = 'grayscale(0.75) brightness(0.7)'
     }
+    // Borrão de movimento: o pião é desenhado várias vezes ao longo do ângulo que percorre num quadro.
+    // Lançado, as lâminas viram um disco com rastros; só ficam nítidas quando ele perde força.
+    const sweep = stopped || flying ? 0 : Math.min((Math.PI * 2) / 3, visualSpinSpeed(t.spin) / 60)
+    const blur = sweep / ((Math.PI * 2) / 3)
+    const copies = 1 + Math.min(9, Math.floor(sweep / 0.12))
     ctx.rotate(t.angle)
-    // Três lâminas na cor escolhida, com contorno claro.
-    ctx.fillStyle = colors[i]
-    ctx.strokeStyle = '#f9eddc'
-    ctx.lineWidth = 1.5
-    ctx.beginPath()
-    for (let k = 0; k < 3; k++) {
-      const a = (k * Math.PI * 2) / 3
-      ctx.moveTo(Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35)
-      ctx.quadraticCurveTo(Math.cos(a + 0.5) * r * 1.15, Math.sin(a + 0.5) * r * 1.15, Math.cos(a + 1.3) * r, Math.sin(a + 1.3) * r)
-      ctx.lineTo(Math.cos(a + 1.6) * r * 0.45, Math.sin(a + 1.6) * r * 0.45)
+    if (blur > 0.25) {
+      ctx.globalAlpha *= 0.55 * blur
+      ctx.fillStyle = colors[i]
+      ctx.beginPath()
+      ctx.arc(0, 0, r * 1.02, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.globalAlpha /= 0.55 * blur
     }
-    ctx.closePath()
-    ctx.fill()
-    ctx.stroke()
+    const baseAlpha = ctx.globalAlpha
+    for (let c = 0; c < copies; c++) {
+      ctx.save()
+      ctx.rotate((-sweep * c) / copies)
+      ctx.globalAlpha = baseAlpha * Math.min(1, 1.8 / copies) * (c === 0 ? 1 : 0.8)
+      drawBlades(ctx, r, colors[i], c === 0 && blur < 0.5)
+      ctx.restore()
+    }
+    ctx.globalAlpha = baseAlpha
+    // Rastros claros em arco, mais fortes quanto mais rápido.
+    if (blur > 0.3) {
+      ctx.strokeStyle = `rgba(249, 237, 220, ${0.55 * blur})`
+      ctx.lineWidth = 2
+      for (const start of [0, Math.PI]) {
+        ctx.beginPath()
+        ctx.arc(0, 0, r * 0.85, start, start + 1.4)
+        ctx.stroke()
+      }
+    }
     ctx.beginPath()
     ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2)
     ctx.strokeStyle = colors[i]
@@ -145,6 +163,23 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
   }
 }
 
+/** Três lâminas na cor do pião; `outline` desenha o contorno claro (só quando as lâminas estão nítidas). */
+function drawBlades(ctx: CanvasRenderingContext2D, r: number, color: string, outline: boolean) {
+  ctx.fillStyle = color
+  ctx.strokeStyle = '#f9eddc'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  for (let k = 0; k < 3; k++) {
+    const a = (k * Math.PI * 2) / 3
+    ctx.moveTo(Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35)
+    ctx.quadraticCurveTo(Math.cos(a + 0.5) * r * 1.15, Math.sin(a + 0.5) * r * 1.15, Math.cos(a + 1.3) * r, Math.sin(a + 1.3) * r)
+    ctx.lineTo(Math.cos(a + 1.6) * r * 0.45, Math.sin(a + 1.6) * r * 0.45)
+  }
+  ctx.closePath()
+  ctx.fill()
+  if (outline) ctx.stroke()
+}
+
 /** Cor inicial de cada jogador: o primeiro domínio da lenda, sem repetir a do oponente. */
 function defaultColors(domains: [Domain[] | undefined, Domain[] | undefined]): [Domain, Domain] {
   const first: Domain = domains[0]?.[0] ?? 'mind'
@@ -167,8 +202,6 @@ export function TopsBattle(props: {
   const [count, setCount] = useState(3)
   const [result, setResult] = useState<Battle | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
-  // Medidores de giro atualizados direto no DOM a cada quadro, sem re-renderizar a tela.
-  const meters = [useRef<HTMLElement>(null), useRef<HTMLElement>(null)] as const
   const [size] = useState(() => Math.min(420, Math.round(window.innerWidth * 0.98)))
   const hex: [string, string] = [DOMAIN_COLORS[colors[0]], DOMAIN_COLORS[colors[1]]]
 
@@ -198,17 +231,9 @@ export function TopsBattle(props: {
       draw(ctx, size, { ...b, tops: [{ ...b.tops[0], x: -0.6, y: 0 }, { ...b.tops[1], x: 0.6, y: 0 }] }, hex, [])
       return
     }
-    const showSpin = (battle: Battle) =>
-      battle.tops.forEach((t, i) => {
-        const el = meters[i].current
-        if (!el) return
-        el.style.width = `${Math.round((t.out ? 0 : t.spin) * 100)}%`
-        el.parentElement!.classList.toggle('low', !t.out && t.spin < 0.25)
-      })
     if (reducedMotion()) {
       const final = runBattle(Math.floor(Math.random() * 2 ** 31))
       draw(ctx, size, final, hex, [])
-      showSpin(final)
       setResult(final)
       setPhase('done')
       return
@@ -250,7 +275,6 @@ export function TopsBattle(props: {
         b = { ...b, time: b.time + DT, tops: b.tops.map((t, i) => (i === b.winner ? { ...w, angle: w.angle + visualSpinSpeed(w.spin) * DT } : t)) as Battle['tops'] }
       }
       draw(ctx, size, b, hex, sparks, finale ?? undefined)
-      showSpin(b)
       if (finale && finale.t >= 1) {
         setPhase('done')
         return
@@ -304,14 +328,9 @@ export function TopsBattle(props: {
         <div className="tops-arena">
           <div className="tops-names">
             {([0, 1] as const).map((p) => (
-              <div key={p} className="tops-gauge">
-                <span>
-                  <i style={{ background: hex[p] }} /> {props.names[p]}
-                </span>
-                <span className="tops-meter" role="img" aria-label={`Giro do pião de ${props.names[p]}`}>
-                  <b ref={meters[p]} style={{ background: hex[p], width: '100%' }} />
-                </span>
-              </div>
+              <span key={p} className="tops-gauge">
+                <i style={{ background: hex[p] }} /> {props.names[p]}
+              </span>
             ))}
           </div>
           <div className="tops-stage" style={{ width: size, height: size }}>
