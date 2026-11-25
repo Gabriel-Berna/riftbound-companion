@@ -26,6 +26,23 @@ export interface Top {
 
 export type BattleEnd = 'ring-out' | 'spin-out' | 'time'
 
+/**
+ * Eventos do modo "piões com eventos": acontecem de tempos em tempos e afetam os dois piões do mesmo jeito.
+ * - quake: o estádio treme e sacode os dois;
+ * - wide-pocket: uma das aberturas da borda fica bem maior por alguns segundos;
+ * - baron: um Barão aparece no centro e arremessa quem chegar perto;
+ * - surge: uma onda de energia devolve giro aos dois.
+ */
+export type ArenaEventKind = 'quake' | 'wide-pocket' | 'baron' | 'surge'
+
+export interface ArenaEvent {
+  kind: ArenaEventKind
+  /** Quando o evento acaba (segundos desde o lançamento). */
+  until: number
+  /** Abertura ampliada (índice em POCKETS), no wide-pocket. */
+  pocket?: number
+}
+
 export interface Battle {
   tops: [Top, Top]
   /** Segundos desde o lançamento. */
@@ -34,6 +51,11 @@ export interface Battle {
   hits: { x: number; y: number; power: number }[]
   winner: PlayerIndex | null
   end: BattleEnd | null
+  /** Modo com eventos ligado; sem ele, a batalha é a clássica. */
+  events?: boolean
+  /** Evento em andamento e quando o próximo começa (só no modo com eventos). */
+  event?: ArenaEvent | null
+  nextEventAt?: number
 }
 
 export const TOP_RADIUS = 0.13
@@ -65,6 +87,17 @@ const HIT_DRAIN_RANDOM = 0.12
 /** Logo depois do lançamento ninguém sai do estádio: a batalha precisa acontecer. */
 const GRACE = 3
 
+/** Eventos: o primeiro entre 3 e 5 s, depois um intervalo de 2,5 a 4,5 s entre o fim de um e o próximo. */
+const EVENT_KINDS: ArenaEventKind[] = ['quake', 'wide-pocket', 'baron', 'surge']
+const EVENT_DURATION: Record<ArenaEventKind, number> = { quake: 1.5, 'wide-pocket': 3, baron: 3, surge: 0.8 }
+/** Raio do Barão no centro e a velocidade com que ele arremessa. */
+export const BARON_RADIUS = 0.2
+const BARON_PUSH = 1.6
+/** Abertura ampliada: meia largura e chance extra de saída. */
+export const WIDE_POCKET_HALF_WIDTH = 0.75
+const QUAKE = 9
+const SURGE = 0.25
+
 /** Velocidade de rotação desenhada (rad/s): de 2 (quase parado) a ~62 (lançado, uns 10 giros por segundo). */
 export const visualSpinSpeed = (spin: number): number => (spin > 0 ? 2 + 60 * spin : 0)
 
@@ -81,7 +114,7 @@ export function seededRandom(seed: number): () => number {
 }
 
 /** Lançamento: lados opostos do estádio, ângulo, força e giro sorteados igualmente para os dois. */
-export function launch(random: () => number): Battle {
+export function launch(random: () => number, opts: { events?: boolean } = {}): Battle {
   const base = random() * Math.PI * 2
   const top = (side: number): Top => {
     const a = base + side * Math.PI + (random() - 0.5) * 0.6
@@ -91,20 +124,57 @@ export function launch(random: () => number): Battle {
     const dir = a + Math.PI + (random() - 0.5) * 0.7
     return { x: Math.cos(a) * r, y: Math.sin(a) * r, vx: Math.cos(dir) * speed, vy: Math.sin(dir) * speed, spin: 0.85 + random() * 0.15, stamina: 0.75 + random() * 0.5, angle: 0, out: false }
   }
-  return { tops: [top(0), top(1)], time: 0, hits: [], winner: null, end: null }
+  const tops: [Top, Top] = [top(0), top(1)]
+  // Sem eventos, nenhum sorteio a mais: a batalha clássica segue idêntica.
+  if (!opts.events) return { tops, time: 0, hits: [], winner: null, end: null }
+  return { tops, time: 0, hits: [], winner: null, end: null, events: true, event: null, nextEventAt: 3 + random() * 2 }
 }
 
-const inPocket = (angle: number) =>
-  POCKETS.some((p) => Math.abs(Math.atan2(Math.sin(angle - p), Math.cos(angle - p))) < POCKET_HALF_WIDTH)
+const angleGap = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)))
+const inPocket = (angle: number, event?: ArenaEvent | null) =>
+  POCKETS.some((p, i) => angleGap(angle, p) < (event?.kind === 'wide-pocket' && event.pocket === i ? WIDE_POCKET_HALF_WIDTH : POCKET_HALF_WIDTH))
+
+/** Começa e termina eventos. O sorteio do evento não depende dos piões, então não favorece ninguém. */
+function updateEvent(b: Battle, tops: [Top, Top], random: () => number): Pick<Battle, 'event' | 'nextEventAt'> {
+  let event = b.event ?? null
+  let nextEventAt = b.nextEventAt
+  if (event && b.time >= event.until) {
+    event = null
+    nextEventAt = b.time + 2.5 + random() * 2
+  }
+  if (!event && nextEventAt !== undefined && b.time >= nextEventAt) {
+    const kind = EVENT_KINDS[Math.floor(random() * EVENT_KINDS.length)]
+    event = { kind, until: b.time + EVENT_DURATION[kind], ...(kind === 'wide-pocket' && { pocket: Math.floor(random() * POCKETS.length) }) }
+    if (kind === 'surge') for (const t of tops) if (!t.out) t.spin = Math.min(1, t.spin + SURGE)
+  }
+  return { event, nextEventAt }
+}
 
 /** Avança a batalha `dt` segundos. Não muda o estado recebido. */
 export function step(b: Battle, dt: number, random: () => number): Battle {
   if (b.winner !== null) return b
   const tops = b.tops.map((t) => ({ ...t })) as [Top, Top]
   const hits: Battle['hits'] = []
+  const { event, nextEventAt } = b.events ? updateEvent(b, tops, random) : { event: null, nextEventAt: undefined }
 
   for (const t of tops) {
     if (t.out) continue
+    if (event?.kind === 'quake') {
+      t.vx += (random() - 0.5) * QUAKE * dt
+      t.vy += (random() - 0.5) * QUAKE * dt
+    }
+    if (event?.kind === 'baron') {
+      // O Barão no centro arremessa quem encostar nele (só quem está indo na direção dele).
+      const d = Math.hypot(t.x, t.y) || 1e-6
+      const nx = t.x / d
+      const ny = t.y / d
+      if (d < BARON_RADIUS + TOP_RADIUS && t.vx * nx + t.vy * ny < BARON_PUSH * 0.5) {
+        t.vx = nx * BARON_PUSH
+        t.vy = ny * BARON_PUSH
+        t.spin = Math.max(0, t.spin - 0.04)
+        hits.push({ x: nx * BARON_RADIUS, y: ny * BARON_RADIUS, power: 0.8 })
+      }
+    }
     const r = Math.hypot(t.x, t.y) || 1e-6
     // Rampa para o centro, giro que faz o pião circular e um tremor leve; piões fracos perdem força.
     const strength = 0.35 + 0.65 * t.spin
@@ -131,7 +201,7 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
       // Parede baixa: cada batida forte pode jogar o pião para fora; nas aberturas, bem mais fácil.
       // Depois do lançamento, a chance de sair cresce aos poucos (nada nos primeiros GRACE segundos).
       const warmup = Math.min(1, Math.max(0, (b.time - GRACE) / GRACE))
-      const chance = warmup * WALL_ESCAPE * Math.max(0, outward - ESCAPE_SPEED) * (inPocket(Math.atan2(t.y, t.x)) ? POCKET_BONUS : 1)
+      const chance = warmup * WALL_ESCAPE * Math.max(0, outward - ESCAPE_SPEED) * (inPocket(Math.atan2(t.y, t.x), event) ? POCKET_BONUS : 1)
       if (random() < chance) {
         t.out = true
         continue
@@ -192,13 +262,14 @@ export function step(b: Battle, dt: number, random: () => number): Battle {
     lost = weaker()
     end = 'time'
   }
-  return { tops, time, hits, winner: lost === null ? null : lost === 0 ? 1 : 0, end }
+  const result: Battle = { tops, time, hits, winner: lost === null ? null : lost === 0 ? 1 : 0, end }
+  return b.events ? { ...result, events: true, event, nextEventAt } : result
 }
 
 /** Roda a batalha inteira (para testes e para quem prefere menos movimento na tela). */
-export function runBattle(seed: number, dt = 1 / 60): Battle {
+export function runBattle(seed: number, opts: { events?: boolean } = {}, dt = 1 / 60): Battle {
   const random = seededRandom(seed)
-  let b = launch(random)
+  let b = launch(random, opts)
   while (b.winner === null) b = step(b, dt, random)
   return b
 }

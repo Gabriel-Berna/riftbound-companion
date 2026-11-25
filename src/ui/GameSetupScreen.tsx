@@ -23,7 +23,8 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
   const [decider, setDecider] = useState<PlayerIndex | null>(rule.kind === 'chooser' ? rule.player : null)
   const [firstPlayer, setFirstPlayer] = useState<PlayerIndex | null>(rule.kind === 'fixed' ? rule.firstPlayer : null)
   const [coinFlipping, setCoinFlipping] = useState(false)
-  const [battling, setBattling] = useState(false)
+  // Batalha de piões aberta: 'classic' ou 'events' (com eventos no estádio).
+  const [battling, setBattling] = useState<'classic' | 'events' | null>(null)
   const [byTops, setByTops] = useState(false)
   const onCoinResult = useCallback((p: PlayerIndex) => setDecider(p), [])
 
@@ -98,8 +99,11 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
                   <button className="secondary" onClick={() => setCoinFlipping(true)}>
                     🪙 Sortear quem decide
                   </button>
-                  <button className="secondary" onClick={() => setBattling(true)}>
+                  <button className="secondary" onClick={() => setBattling('classic')}>
                     🌀 Batalha de piões
+                  </button>
+                  <button className="secondary" onClick={() => setBattling('events')}>
+                    ⚡ Piões com eventos
                   </button>
                 </div>
               )
@@ -129,12 +133,13 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
         <TopsBattle
           names={[name(0), name(1)]}
           legendDomains={[findLegend(match.players[0].legend)?.domains, findLegend(match.players[1].legend)?.domains]}
+          withEvents={battling === 'events'}
           onResult={(p) => {
             setDecider(p)
             setByTops(true)
-            setBattling(false)
+            setBattling(null)
           }}
-          onCancel={() => setBattling(false)}
+          onCancel={() => setBattling(null)}
         />
       )}
 

@@ -1,17 +1,42 @@
 import { useEffect, useRef, useState } from 'react'
-import { launch, POCKET_HALF_WIDTH, POCKETS, runBattle, seededRandom, step, TOP_RADIUS, visualSpinSpeed, type Battle, type BattleEnd } from '../engine/tops'
+import {
+  BARON_RADIUS,
+  launch,
+  POCKET_HALF_WIDTH,
+  POCKETS,
+  runBattle,
+  seededRandom,
+  step,
+  TOP_RADIUS,
+  visualSpinSpeed,
+  WIDE_POCKET_HALF_WIDTH,
+  type ArenaEventKind,
+  type Battle,
+  type BattleEnd,
+} from '../engine/tops'
 import { DOMAINS, type Domain, type PlayerIndex } from '../engine/types'
 import { DOMAIN_COLORS, POWER_LABELS } from './text'
 
-type Phase = 'pick' | 'countdown' | 'battle' | 'done'
+type Phase = 'pick' | 'countdown' | 'battle' | 'replay' | 'done'
 
 const DT = 1 / 60
 /** Depois do resultado, por quanto tempo o vencedor continua girando antes do placar (s). */
 const FINALE = 1.4
+/** O replay mostra os últimos segundos da batalha (e o encerramento) nesta velocidade. */
+const REPLAY_SECONDS = 2
+const REPLAY_SPEED = 0.3
+
 const END_TEXT: Record<BattleEnd, (loser: string) => string> = {
   'ring-out': (loser) => `O pião de ${loser} foi arremessado para fora do estádio`,
   'spin-out': (loser) => `O pião de ${loser} parou de girar`,
   time: () => 'O pião vencedor girou por mais tempo',
+}
+
+const EVENT_TEXT: Record<ArenaEventKind, string> = {
+  quake: '⚡ O estádio está tremendo!',
+  'wide-pocket': '⚠ Uma abertura se alargou!',
+  baron: '👁 O Barão apareceu no centro!',
+  surge: '✨ Onda de energia: giro renovado!',
 }
 
 interface Spark {
@@ -31,14 +56,105 @@ interface Finale {
   t: number
 }
 
+/** Um quadro desenhado, guardado para o replay. */
+interface Frame {
+  b: Battle
+  sparks: Spark[]
+  finale?: Finale
+}
+
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-/** Desenha o estádio, os piões e as faíscas. Coordenadas da batalha: estádio de raio 1 no centro. */
-function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [string, string], sparks: Spark[], finale?: Finale) {
+/** Número de lâminas de cada formato: define o período do borrão de movimento. */
+const BLADES: Record<Domain, number> = { fury: 3, calm: 4, mind: 3, body: 6, chaos: 5, order: 4 }
+
+const polar = (r: number, a: number): [number, number] => [Math.cos(a) * r, Math.sin(a) * r]
+
+/**
+ * Formato do pião por domínio: Fury com lâminas pontudas, Calm com pétalas, Mind com luas crescentes,
+ * Body como uma engrenagem pesada, Chaos com lâminas irregulares e Order como uma estrela simétrica.
+ * `outline` desenha o contorno claro (só quando as lâminas estão nítidas).
+ */
+function drawBlades(ctx: CanvasRenderingContext2D, r: number, domain: Domain, color: string, outline: boolean) {
+  ctx.fillStyle = color
+  ctx.strokeStyle = '#f9eddc'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  const n = BLADES[domain]
+  const step = (Math.PI * 2) / n
+  for (let k = 0; k < n; k++) {
+    const a = k * step
+    switch (domain) {
+      case 'fury': // ganchos pontudos
+        ctx.moveTo(...polar(r * 0.3, a))
+        ctx.lineTo(...polar(r * 1.2, a + 0.35))
+        ctx.lineTo(...polar(r * 0.8, a + 0.95))
+        ctx.lineTo(...polar(r * 0.42, a + 1.35))
+        ctx.closePath()
+        break
+      case 'calm': {
+        // pétalas arredondadas
+        const [px, py] = polar(r * 0.62, a)
+        ctx.moveTo(px + Math.cos(a) * r * 0.45, py + Math.sin(a) * r * 0.45)
+        ctx.ellipse(px, py, r * 0.45, r * 0.27, a, 0, Math.PI * 2)
+        break
+      }
+      case 'mind': // luas crescentes
+        ctx.moveTo(...polar(r * 0.45, a))
+        ctx.arc(0, 0, r * 1.05, a + 0.15, a + 1.55)
+        ctx.quadraticCurveTo(...polar(r * 0.6, a + 1.2), ...polar(r * 0.45, a))
+        ctx.closePath()
+        break
+      case 'body': {
+        // engrenagem: dentes largos e baixos
+        const half = step / 4
+        ctx.moveTo(...polar(r * 0.78, a - half * 2))
+        ctx.lineTo(...polar(r * 0.78, a - half))
+        ctx.lineTo(...polar(r * 1.05, a - half * 0.8))
+        ctx.lineTo(...polar(r * 1.05, a + half * 0.8))
+        ctx.lineTo(...polar(r * 0.78, a + half))
+        ctx.lineTo(...polar(r * 0.78, a + half * 2))
+        ctx.lineTo(...polar(r * 0.4, a + half * 2))
+        ctx.lineTo(...polar(r * 0.4, a - half * 2))
+        ctx.closePath()
+        break
+      }
+      case 'chaos': {
+        // lâminas tortas, cada uma de um tamanho
+        const len = [1.18, 0.82, 1.05, 0.7, 0.95][k]
+        ctx.moveTo(...polar(r * 0.35, a - 0.2))
+        ctx.lineTo(...polar(r * len, a + 0.1 + (k % 2) * 0.25))
+        ctx.lineTo(...polar(r * len * 0.6, a + 0.45))
+        ctx.lineTo(...polar(r * 0.4, a + 0.6))
+        ctx.closePath()
+        break
+      }
+      case 'order': // estrela de quatro pontas, simétrica
+        ctx.moveTo(...polar(r * 0.42, a - step / 2))
+        ctx.lineTo(...polar(r * 1.15, a))
+        ctx.lineTo(...polar(r * 0.42, a + step / 2))
+        ctx.closePath()
+        break
+    }
+  }
+  ctx.fill()
+  if (outline) ctx.stroke()
+}
+
+/**
+ * Desenha o estádio, os eventos, os piões e as faíscas. Coordenadas da batalha: estádio de raio 1 no centro.
+ * `timeScale` < 1 é a câmera lenta do replay: o borrão de movimento diminui e as lâminas aparecem.
+ */
+function draw(ctx: CanvasRenderingContext2D, size: number, frame: Frame, domains: [Domain, Domain], timeScale = 1) {
+  const { b, sparks, finale } = frame
+  const colors = domains.map((d) => DOMAIN_COLORS[d])
   // Margem em volta do estádio, para ver o pião arremessado saindo.
   const R = size * 0.4
-  const cx = size / 2
-  const cy = size / 2
+  const event = b.event
+  // Terremoto: tudo treme.
+  const shake = event?.kind === 'quake' ? 4 : 0
+  const cx = size / 2 + Math.sin(b.time * 71) * shake
+  const cy = size / 2 + Math.cos(b.time * 53) * shake
   ctx.clearRect(0, 0, size, size)
 
   // Fundo em cone: mais claro no centro, escuro na borda, com anéis.
@@ -59,11 +175,12 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
   }
 
   // Borda dourada, interrompida nas aberturas (por onde se perde por ring-out).
+  const width = (i: number) => (event?.kind === 'wide-pocket' && event.pocket === i ? WIDE_POCKET_HALF_WIDTH : POCKET_HALF_WIDTH)
+  const gaps = POCKETS.map((p, i) => [p - width(i), p + width(i), i] as const).sort((x, y) => x[0] - y[0])
   ctx.lineWidth = 3
   ctx.strokeStyle = '#c8aa6e'
   ctx.shadowColor = 'rgba(200, 170, 110, 0.6)'
   ctx.shadowBlur = 8
-  const gaps = POCKETS.map((p) => [p - POCKET_HALF_WIDTH, p + POCKET_HALF_WIDTH]).sort((x, y) => x[0] - y[0])
   gaps.forEach(([, end], i) => {
     const next = gaps[(i + 1) % gaps.length][0] + (i + 1 === gaps.length ? Math.PI * 2 : 0)
     ctx.beginPath()
@@ -71,12 +188,34 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
     ctx.stroke()
   })
   ctx.shadowBlur = 0
-  ctx.strokeStyle = 'rgba(239, 125, 0, 0.55)'
-  ctx.lineWidth = 3
-  for (const [start, end] of gaps) {
+  for (const [start, end, i] of gaps) {
+    const widened = width(i) !== POCKET_HALF_WIDTH
+    ctx.strokeStyle = widened ? `rgba(239, 125, 0, ${0.6 + 0.4 * Math.sin(b.time * 12)})` : 'rgba(239, 125, 0, 0.55)'
+    ctx.lineWidth = widened ? 6 : 3
     ctx.beginPath()
     ctx.arc(cx, cy, R + 2, start, end)
     ctx.stroke()
+  }
+
+  // Barão no centro: um olho roxo que arremessa quem chega perto.
+  if (event?.kind === 'baron') {
+    const br = BARON_RADIUS * R
+    const glow = ctx.createRadialGradient(cx, cy, br * 0.2, cx, cy, br * 1.4)
+    glow.addColorStop(0, '#d9a6ff')
+    glow.addColorStop(0.55, '#7a3fb8')
+    glow.addColorStop(1, 'rgba(122, 63, 184, 0)')
+    ctx.fillStyle = glow
+    ctx.beginPath()
+    ctx.arc(cx, cy, br * 1.4, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#1b0b2b'
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, br * 0.55, br * 0.25 * (0.6 + 0.4 * Math.abs(Math.sin(b.time * 2))), 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.fillStyle = '#f2c94c'
+    ctx.beginPath()
+    ctx.arc(cx, cy, br * 0.12, 0, Math.PI * 2)
+    ctx.fill()
   }
 
   b.tops.forEach((t, i) => {
@@ -97,6 +236,14 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
       ctx.globalAlpha = Math.max(0, 1 - finale.t * 1.3)
       ctx.scale(1 - finale.t * 0.4, 1 - finale.t * 0.4)
     }
+    // Onda de energia: brilho em volta dos piões.
+    if (event?.kind === 'surge' && !stopped) {
+      ctx.strokeStyle = `rgba(120, 255, 220, ${0.5 + 0.3 * Math.sin(b.time * 20)})`
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.arc(0, 0, r * 1.35, 0, Math.PI * 2)
+      ctx.stroke()
+    }
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)'
     ctx.beginPath()
     ctx.ellipse(3, 4, r, r * 0.9, 0, 0, Math.PI * 2)
@@ -107,9 +254,10 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
       ctx.filter = 'grayscale(0.75) brightness(0.7)'
     }
     // Borrão de movimento: o pião é desenhado várias vezes ao longo do ângulo que percorre num quadro.
-    // Lançado, as lâminas viram um disco com rastros; só ficam nítidas quando ele perde força.
-    const sweep = stopped || flying ? 0 : Math.min((Math.PI * 2) / 3, visualSpinSpeed(t.spin) / 60)
-    const blur = sweep / ((Math.PI * 2) / 3)
+    // Lançado, as lâminas viram um disco com rastros; só ficam nítidas quando ele perde força (ou na câmera lenta).
+    const period = (Math.PI * 2) / BLADES[domains[i]]
+    const sweep = stopped || flying ? 0 : Math.min(period, (visualSpinSpeed(t.spin) * timeScale) / 60)
+    const blur = sweep / period
     const copies = 1 + Math.min(9, Math.floor(sweep / 0.12))
     ctx.rotate(t.angle)
     if (blur > 0.25) {
@@ -125,7 +273,7 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
       ctx.save()
       ctx.rotate((-sweep * c) / copies)
       ctx.globalAlpha = baseAlpha * Math.min(1, 1.8 / copies) * (c === 0 ? 1 : 0.8)
-      drawBlades(ctx, r, colors[i], c === 0 && blur < 0.5)
+      drawBlades(ctx, r, domains[i], colors[i], c === 0 && blur < 0.5)
       ctx.restore()
     }
     ctx.globalAlpha = baseAlpha
@@ -140,7 +288,7 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
       }
     }
     ctx.beginPath()
-    ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2)
+    ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2)
     ctx.strokeStyle = colors[i]
     ctx.lineWidth = 3
     ctx.stroke()
@@ -163,23 +311,6 @@ function draw(ctx: CanvasRenderingContext2D, size: number, b: Battle, colors: [s
   }
 }
 
-/** Três lâminas na cor do pião; `outline` desenha o contorno claro (só quando as lâminas estão nítidas). */
-function drawBlades(ctx: CanvasRenderingContext2D, r: number, color: string, outline: boolean) {
-  ctx.fillStyle = color
-  ctx.strokeStyle = '#f9eddc'
-  ctx.lineWidth = 1.5
-  ctx.beginPath()
-  for (let k = 0; k < 3; k++) {
-    const a = (k * Math.PI * 2) / 3
-    ctx.moveTo(Math.cos(a) * r * 0.35, Math.sin(a) * r * 0.35)
-    ctx.quadraticCurveTo(Math.cos(a + 0.5) * r * 1.15, Math.sin(a + 0.5) * r * 1.15, Math.cos(a + 1.3) * r, Math.sin(a + 1.3) * r)
-    ctx.lineTo(Math.cos(a + 1.6) * r * 0.45, Math.sin(a + 1.6) * r * 0.45)
-  }
-  ctx.closePath()
-  ctx.fill()
-  if (outline) ctx.stroke()
-}
-
 /** Cor inicial de cada jogador: o primeiro domínio da lenda, sem repetir a do oponente. */
 function defaultColors(domains: [Domain[] | undefined, Domain[] | undefined]): [Domain, Domain] {
   const first: Domain = domains[0]?.[0] ?? 'mind'
@@ -187,13 +318,35 @@ function defaultColors(domains: [Domain[] | undefined, Domain[] | undefined]): [
   return [first, second]
 }
 
+/** Prévia do pião na escolha de cor/formato. */
+function TopPreview({ domain }: { domain: Domain }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const dpr = window.devicePixelRatio || 1
+    el.width = 44 * dpr
+    el.height = 44 * dpr
+    const ctx = el.getContext('2d')!
+    ctx.scale(dpr, dpr)
+    ctx.translate(22, 22)
+    drawBlades(ctx, 17, domain, DOMAIN_COLORS[domain], true)
+    ctx.fillStyle = '#f9eddc'
+    ctx.beginPath()
+    ctx.arc(0, 0, 5, 0, Math.PI * 2)
+    ctx.fill()
+  }, [domain])
+  return <canvas ref={ref} style={{ width: 44, height: 44 }} aria-hidden="true" />
+}
+
 /**
- * Batalha de piões em tela cheia: cada jogador escolhe a cor do seu pião, os dois são lançados e
- * quem vencer decide quem começa o primeiro jogo.
+ * Batalha de piões em tela cheia: cada jogador escolhe a cor (e o formato) do seu pião, os dois são lançados e
+ * quem vencer decide quem começa o primeiro jogo. `withEvents` liga os eventos no estádio.
  */
 export function TopsBattle(props: {
   names: [string, string]
   legendDomains: [Domain[] | undefined, Domain[] | undefined]
+  withEvents?: boolean
   onResult: (winner: PlayerIndex) => void
   onCancel: () => void
 }) {
@@ -201,9 +354,24 @@ export function TopsBattle(props: {
   const [colors, setColors] = useState<[Domain, Domain]>(() => defaultColors(props.legendDomains))
   const [count, setCount] = useState(3)
   const [result, setResult] = useState<Battle | null>(null)
+  const [banner, setBanner] = useState<ArenaEventKind | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
+  // Quadros guardados para o replay: os últimos segundos da batalha e o encerramento.
+  const frames = useRef<Frame[]>([])
   const [size] = useState(() => Math.min(420, Math.round(window.innerWidth * 0.98)))
   const hex: [string, string] = [DOMAIN_COLORS[colors[0]], DOMAIN_COLORS[colors[1]]]
+  const events = !!props.withEvents
+
+  const context = () => {
+    const el = canvas.current
+    if (!el) return null
+    const dpr = window.devicePixelRatio || 1
+    el.width = size * dpr
+    el.height = size * dpr
+    const ctx = el.getContext('2d')!
+    ctx.scale(dpr, dpr)
+    return ctx
+  }
 
   // Contagem regressiva: 3, 2, 1, lançar.
   useEffect(() => {
@@ -218,28 +386,26 @@ export function TopsBattle(props: {
 
   // Estádio parado na contagem; a batalha em si roda a 60 passos por segundo, independente da tela.
   useEffect(() => {
-    const el = canvas.current
-    if (!el || (phase !== 'countdown' && phase !== 'battle')) return
-    const dpr = window.devicePixelRatio || 1
-    el.width = size * dpr
-    el.height = size * dpr
-    const ctx = el.getContext('2d')!
-    ctx.scale(dpr, dpr)
+    if (phase !== 'countdown' && phase !== 'battle') return
+    const ctx = context()
+    if (!ctx) return
     const random = seededRandom(Math.floor(Math.random() * 2 ** 31))
-    let b = launch(random)
+    let b = launch(random, { events })
     if (phase === 'countdown') {
-      draw(ctx, size, { ...b, tops: [{ ...b.tops[0], x: -0.6, y: 0 }, { ...b.tops[1], x: 0.6, y: 0 }] }, hex, [])
+      draw(ctx, size, { b: { ...b, tops: [{ ...b.tops[0], x: -0.6, y: 0 }, { ...b.tops[1], x: 0.6, y: 0 }] }, sparks: [] }, colors)
       return
     }
     if (reducedMotion()) {
-      const final = runBattle(Math.floor(Math.random() * 2 ** 31))
-      draw(ctx, size, final, hex, [])
+      const final = runBattle(Math.floor(Math.random() * 2 ** 31), { events })
+      draw(ctx, size, { b: final, sparks: [] }, colors)
       setResult(final)
       setPhase('done')
       return
     }
+    frames.current = []
     let sparks: Spark[] = []
     let finale: (Finale & { vx: number; vy: number }) | null = null
+    let shownEvent: ArenaEventKind | null = null
     let frame = 0
     let last = performance.now()
     let acc = 0
@@ -258,6 +424,11 @@ export function TopsBattle(props: {
         if (b.hits.length) navigator.vibrate?.(20)
       }
       sparks = sparks.map((s) => ({ ...s, x: s.x + s.vx * DT, y: s.y + s.vy * DT, life: s.life - 2 * DT })).filter((s) => s.life > 0)
+      const kind = b.event?.kind ?? null
+      if (kind !== shownEvent) {
+        shownEvent = kind
+        setBanner(kind)
+      }
 
       // Encerramento: o vencedor segue girando; o perdedor fica parado ou sai voando pela borda.
       if (b.winner !== null) {
@@ -274,8 +445,44 @@ export function TopsBattle(props: {
         const w = b.tops[b.winner]
         b = { ...b, time: b.time + DT, tops: b.tops.map((t, i) => (i === b.winner ? { ...w, angle: w.angle + visualSpinSpeed(w.spin) * DT } : t)) as Battle['tops'] }
       }
-      draw(ctx, size, b, hex, sparks, finale ?? undefined)
+      const current: Frame = { b, sparks, finale: finale ? { loser: finale.loser, t: finale.t, fly: finale.fly } : undefined }
+      draw(ctx, size, current, colors)
+      // Guarda só o trecho final da batalha (e todo o encerramento) para o replay.
+      frames.current.push(current)
+      if (!finale) {
+        const cut = frames.current.findIndex((f) => f.b.time >= b.time - REPLAY_SECONDS)
+        if (cut > 0) frames.current.splice(0, cut)
+      }
       if (finale && finale.t >= 1) {
+        setBanner(null)
+        setPhase('replay')
+        return
+      }
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+    // As cores e o modo não mudam depois do lançamento, então não precisam reiniciar a batalha.
+  }, [phase, size])
+
+  // Replay em câmera lenta dos últimos segundos; um toque pula.
+  useEffect(() => {
+    if (phase !== 'replay') return
+    const ctx = context()
+    const list = frames.current
+    if (!ctx || list.length === 0) {
+      setPhase('done')
+      return
+    }
+    let pos = 0
+    let frame = 0
+    let last = performance.now()
+    const tick = (now: number) => {
+      // Avança no ritmo em que os quadros foram gravados (60 por segundo), na velocidade do replay.
+      pos += ((now - last) / 1000) * 60 * REPLAY_SPEED
+      last = now
+      draw(ctx, size, list[Math.min(list.length - 1, Math.floor(pos))], colors, REPLAY_SPEED)
+      if (pos >= list.length - 1) {
         setPhase('done')
         return
       }
@@ -283,22 +490,33 @@ export function TopsBattle(props: {
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-    // As cores não mudam depois da escolha, então não precisam reiniciar a batalha.
+  }, [phase, size])
+
+  // No placar final, o estádio fica no último quadro.
+  useEffect(() => {
+    if (phase !== 'done') return
+    const last = frames.current.at(-1)
+    const ctx = last && context()
+    if (ctx && last) draw(ctx, size, last, colors)
   }, [phase, size])
 
   const winner = result?.winner ?? null
   const loser = winner === null ? null : winner === 0 ? 1 : 0
+  const title = events ? 'Piões com eventos' : 'Batalha de piões'
 
   return (
-    <div className="tops-overlay" role="dialog" aria-label="Batalha de piões">
+    <div className="tops-overlay" role="dialog" aria-label={title}>
       {phase === 'pick' ? (
         <div className="tops-pick">
-          <h2>Batalha de piões</h2>
-          <p className="hint">Cada um escolhe a cor do seu pião. Quem vencer decide quem começa.</p>
+          <h2>{title}</h2>
+          <p className="hint">
+            Cada um escolhe o seu pião: cada domínio tem uma cor e um formato. Quem vencer decide quem começa.
+            {events && ' Durante a batalha, eventos no estádio afetam os dois piões.'}
+          </p>
           {([0, 1] as const).map((p) => (
             <div key={p} className="tops-player">
               <b className={`c${p}`}>{props.names[p]}</b>
-              <div className="tops-swatches" role="radiogroup" aria-label={`Cor do pião de ${props.names[p]}`}>
+              <div className="tops-swatches" role="radiogroup" aria-label={`Pião de ${props.names[p]}`}>
                 {DOMAINS.map((d) => {
                   const taken = colors[p === 0 ? 1 : 0] === d
                   return (
@@ -309,9 +527,10 @@ export function TopsBattle(props: {
                       aria-label={POWER_LABELS[d]}
                       disabled={taken}
                       className={`tops-swatch ${colors[p] === d ? 'on' : ''}`}
-                      style={{ background: DOMAIN_COLORS[d] }}
                       onClick={() => setColors((c) => (p === 0 ? [d, c[1]] : [c[0], d]))}
-                    />
+                    >
+                      <TopPreview domain={d} />
+                    </button>
                   )
                 })}
               </div>
@@ -333,12 +552,27 @@ export function TopsBattle(props: {
               </span>
             ))}
           </div>
-          <div className="tops-stage" style={{ width: size, height: size }}>
+          <div
+            className={`tops-stage ${phase === 'replay' ? 'replaying' : ''}`}
+            style={{ width: size, height: size }}
+            onClick={() => phase === 'replay' && setPhase('done')}
+          >
             <canvas ref={canvas} style={{ width: size, height: size }} aria-hidden="true" />
             {phase === 'countdown' && (
               <span key={count} className="tops-count">
                 {count > 0 ? count : 'Lançar!'}
               </span>
+            )}
+            {phase === 'battle' && banner && (
+              <span key={banner} className="tops-event" role="status">
+                {EVENT_TEXT[banner]}
+              </span>
+            )}
+            {phase === 'replay' && (
+              <>
+                <span className="tops-replay-tag">● Replay</span>
+                <span className="tops-replay-skip">Toque para pular</span>
+              </>
             )}
           </div>
           {phase === 'done' && result && winner !== null && loser !== null && (
@@ -346,12 +580,15 @@ export function TopsBattle(props: {
               <span className="tops-winner">
                 <i style={{ background: hex[winner] }} /> <b style={{ color: hex[winner] }}>{props.names[winner]}</b> venceu!
               </span>
-              <small>
-                {END_TEXT[result.end!](props.names[loser])}
-              </small>
+              <small>{END_TEXT[result.end!](props.names[loser])}</small>
               <button className="primary big" onClick={() => props.onResult(winner)}>
                 {props.names[winner]} decide quem começa
               </button>
+              {frames.current.length > 0 && (
+                <button className="link" onClick={() => setPhase('replay')}>
+                  🎬 Ver o replay de novo
+                </button>
+              )}
             </div>
           )}
         </div>
