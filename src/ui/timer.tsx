@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { timeLeft, type MatchAction, type MatchState } from '../engine/match'
+import { Icon } from './icons'
 
 /** Relógio que atualiza a cada segundo enquanto o componente está na tela. */
 export function useNow(active: boolean): number {
@@ -38,7 +39,7 @@ export function RoundClock({ match }: { match: MatchState }) {
   const low = left < 5 * 60_000
   return (
     <span className={`round-clock ${low ? 'low' : ''} ${paused ? 'paused' : ''} ${match.timeUp ? 'up' : ''}`}>
-      ⏱ {match.timeUp ? 'Tempo esgotado' : formatClock(left)}
+      <Icon name="clock" /> {match.timeUp ? 'Tempo esgotado' : formatClock(left)}
       {paused && ' · pausado'}
     </span>
   )

@@ -7,6 +7,7 @@ import type { PlayerIndex } from '../engine/types'
 import { newId, type AppAction } from '../store'
 import { LegendPicker, LegendTile } from './cards'
 import { Brand } from './common'
+import { Icon } from './icons'
 
 type GameOutcome = 'win' | 'loss' | 'draw'
 
@@ -95,7 +96,7 @@ export function ManualRecordScreen(props: {
 
       {activeEvent && (
         <button className={`event-banner ${inEvent ? '' : 'off'}`} onClick={() => setInEvent(!inEvent)} aria-pressed={inEvent}>
-          <span aria-hidden="true">🏆</span>
+          <Icon name="trophy" />
           <span>
             <b>{inEvent ? `${activeEvent.name} · Rodada ${round}` : 'Fora do evento'}</b>
             <small>{inEvent ? 'Toque para registrar fora do evento' : `Toque para contar como rodada ${round}`}</small>

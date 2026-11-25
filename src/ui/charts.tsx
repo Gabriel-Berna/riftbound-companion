@@ -1,6 +1,7 @@
 import { useState, type PointerEvent } from 'react'
 import { findLegend } from '../data/cards'
 import { matchupKey, splitTotal, winRate, type Matchup, type PointsSplit, type Tally, type TimelinePoint } from '../engine/stats'
+import { Icon } from './icons'
 
 const pct = (rate: number) => `${Math.round(rate * 100)}%`
 const tallyText = (t: Tally) => `${t.played} jogo${t.played > 1 ? 's' : ''} · ${t.wins}V ${t.losses}D${t.draws ? ` ${t.draws}E` : ''}`
@@ -161,9 +162,9 @@ export function MatchupHeatmap({ matchup }: { matchup: Matchup }) {
 
 /** Origens dos pontos, na ordem fixa das cores (validadas para o fundo escuro do app). */
 const SOURCES = [
-  { key: 'hold', label: 'Hold', icon: '⚑' },
-  { key: 'conquer', label: 'Conquer', icon: '⚔' },
-  { key: 'other', label: 'Efeitos e outros', icon: '✦' },
+  { key: 'hold', label: 'Hold', icon: 'flag' },
+  { key: 'conquer', label: 'Conquer', icon: 'swords' },
+  { key: 'other', label: 'Efeitos e outros', icon: 'sparkle' },
 ] as const
 
 type Source = (typeof SOURCES)[number]['key']
@@ -178,7 +179,7 @@ export function PointsSplitBars({ rows }: { rows: { label: string; whose: string
       <div className="split-legend" aria-hidden="true">
         {SOURCES.map((s) => (
           <span key={s.key}>
-            <i className={`swatch ${s.key}`} /> {s.icon} {s.label}
+            <i className={`swatch ${s.key}`} /> <Icon name={s.icon} /> {s.label}
           </span>
         ))}
       </div>

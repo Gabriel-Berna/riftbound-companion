@@ -2,9 +2,10 @@ import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, typ
 import { keywordInfo } from '../data/keywords'
 import { EMPTY_FILTER, filterLibrary, librarySets, loadLibrary, type CardType, type LibraryCard, type LibraryFilter } from '../data/library'
 import { DOMAINS, type Domain } from '../engine/types'
-import { DomainIcons } from './cards'
+import { DomainIcons, domainIconUrl } from './cards'
 import { Brand, Sheet } from './common'
 import { DOMAIN_COLORS, POWER_LABELS } from './text'
+import { Icon } from './icons'
 
 const TYPE_LABELS: Record<CardType, string> = {
   unit: 'Unidade',
@@ -56,7 +57,9 @@ export function CardText({ text }: { text: string }) {
           return <i key={i} className="sym power" style={{ background: DOMAIN_COLORS[domain] }} title={`Power de ${token}`} />
         if (token === 'A') return <i key={i} className="sym power" style={{ background: DOMAIN_COLORS.universal }} title="Power de qualquer domínio" />
         if (token === 'E' || token === 'T') return <span key={i} className="sym exhaust" title="Exaurir">⟳</span>
-        if (token === 'M' || token === 'S') return <span key={i} className="sym might" title="Might">⚔</span>
+        if (token === 'M' || token === 'S') return <span key={i} className="sym might" title="Might">
+          <Icon name="swords" />
+        </span>
         if (token === '>' || token === '&gt;') return <span key={i} className="sym arrow">▸</span>
         return <span key={i} className="kw">{token}</span>
       })}
@@ -122,7 +125,10 @@ function CardDetail({ card, onClose }: { card: LibraryCard; onClose: () => void 
           {/* Em equipamentos, o Might é o bônus dado à unidade (mostrado abaixo). */}
           {card.might !== null && card.mightBonus === null && (
             <span className="stat-pill">
-              <span className="sym might">⚔</span> {card.might} Might
+              <span className="sym might">
+                <Icon name="swords" />
+              </span>{' '}
+              {card.might} Might
             </span>
           )}
           {card.mightBonus !== null && <span className="stat-pill">+{card.mightBonus} Might ao anexar</span>}
@@ -215,7 +221,7 @@ export function LibraryScreen(props: { onClose: () => void; overlay?: boolean })
           />
           <div className="chips scroll">
             <button className={`chip ${filter.withArts ? 'on' : ''}`} onClick={() => update({ withArts: !filter.withArts })} aria-pressed={filter.withArts}>
-              🎨 Artes alternativas
+              <Icon name="art" /> Artes alternativas
             </button>
             {TYPE_FILTERS.map(([type, label]) => (
               <button key={type} className={`chip ${filter.type === type ? 'on' : ''}`} onClick={() => update({ type })}>
@@ -235,7 +241,7 @@ export function LibraryScreen(props: { onClose: () => void; overlay?: boolean })
                   aria-label={POWER_LABELS[d]}
                   title={POWER_LABELS[d]}
                 >
-                  <i />
+                  <img src={domainIconUrl(d)} alt="" />
                 </button>
               ))}
             </div>
@@ -256,7 +262,9 @@ export function LibraryScreen(props: { onClose: () => void; overlay?: boolean })
           {results.slice(0, limit).map((c) => (
             <button key={c.id + c.name} className={`card-thumb ${c.orientation}`} onClick={() => setSelected(c)} aria-label={c.name}>
               <img src={image(c.image, c.orientation === 'landscape' ? 480 : 300)} alt="" loading="lazy" />
-              {c.variants.length > 1 && <span className="art-count">🎨 {c.variants.length}</span>}
+              {c.variants.length > 1 && <span className="art-count">
+                  <Icon name="art" /> {c.variants.length}
+                </span>}
             </button>
           ))}
         </div>

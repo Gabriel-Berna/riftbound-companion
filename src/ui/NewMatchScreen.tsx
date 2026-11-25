@@ -6,6 +6,7 @@ import { nextRound, type TcgEvent } from '../engine/events'
 import { isPlaceholderBattlefield, type MatchRecord } from '../engine/stats'
 import type { AppAction } from '../store'
 import { ArtPicker, BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker } from './cards'
+import { Icon } from './icons'
 
 interface Draft {
   name: string
@@ -118,7 +119,7 @@ export function NewMatchScreen(props: {
 
       {activeEvent && (
         <button className={`event-banner ${inEvent ? '' : 'off'}`} onClick={() => setInEvent(!inEvent)} aria-pressed={inEvent}>
-          <span aria-hidden="true">🏆</span>
+          <Icon name="trophy" />
           <span>
             <b>{inEvent ? `${activeEvent.name} · Rodada ${round}` : 'Fora do evento'}</b>
             <small>{inEvent ? 'Toque para jogar fora do evento' : `Toque para contar como rodada ${round} de ${activeEvent.name}`}</small>
@@ -137,7 +138,9 @@ export function NewMatchScreen(props: {
       </div>
 
       <div className="timer-choice">
-        <span className="hint">⏱ Timer de rodada</span>
+        <span className="hint">
+          <Icon name="clock" /> Timer de rodada
+        </span>
         <div className="chips">
           {[0, 50, 60].map((min) => (
             <button key={min} className={`chip ${timer === min ? 'on' : ''}`} onClick={() => setTimer(min)}>
@@ -149,7 +152,9 @@ export function NewMatchScreen(props: {
 
       {props.decks.length > 0 && (
         <div className="deck-choice">
-          <span className="hint">🃏 Seu deck</span>
+          <span className="hint">
+            <Icon name="cards" /> Seu deck
+          </span>
           <div className="chips scroll">
             {props.decks.map((d) => (
               <button
@@ -196,7 +201,7 @@ export function NewMatchScreen(props: {
               </button>
               {legend && legend.arts.length > 1 && (
                 <button className="art-btn" onClick={() => setPickingArt(p)} aria-label={`Trocar arte de ${legend.champion}`}>
-                  🎨 Arte · {legend.arts.length}
+                  <Icon name="art" /> Arte · {legend.arts.length}
                 </button>
               )}
               <input
@@ -266,7 +271,7 @@ export function NewMatchScreen(props: {
       </details>
 
       <button className="primary big start-match" onClick={start}>
-        ⚔ Começar partida
+        <Icon name="swords" /> Começar partida
       </button>
 
       <datalist id="known-opponents">

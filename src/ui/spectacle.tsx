@@ -4,6 +4,7 @@ import type { MatchState } from '../engine/match'
 import type { GameResult, GameState, PlayerIndex } from '../engine/types'
 import { DomainIcons } from './cards'
 import { DOMAIN_COLORS } from './text'
+import { Icon } from './icons'
 
 const PLAYER_COLORS = ['#4cc3ff', '#ff6a5c']
 
@@ -149,7 +150,7 @@ export function VictoryScreen(props: {
           {props.matchOver ? 'Ver resultado' : 'Próximo jogo'}
         </button>
         <button className="link" onClick={props.onUndo}>
-          ↶ Desfazer última ação
+          <Icon name="undo" /> Desfazer última ação
         </button>
       </div>
     </div>

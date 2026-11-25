@@ -8,6 +8,7 @@ import { CoinFlip } from './spectacle'
 import { TopsBattle } from './TopsBattle'
 import { findLegend } from '../data/cards'
 import { RoundClock } from './timer'
+import { Icon } from './icons'
 
 const pick = <T,>(items: T[]): T => items[Math.floor(Math.random() * items.length)]
 
@@ -61,7 +62,7 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
         <h2>Battlefields</h2>
         {isDuel && (
           <button className="secondary" onClick={() => setChoices([pick([...options[0]]), pick([...options[1]])])}>
-            🎲 Sortear battlefields
+            <Icon name="dice" /> Sortear battlefields
           </button>
         )}
         {([0, 1] as const).map((p) => (
@@ -97,13 +98,13 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
               !coinFlipping && (
                 <div className="draw-methods">
                   <button className="secondary" onClick={() => setCoinFlipping(true)}>
-                    🪙 Sortear quem decide
+                    <Icon name="coin" /> Sortear quem decide
                   </button>
                   <button className="secondary" onClick={() => setBattling('classic')}>
-                    🌀 Batalha de piões
+                    <Icon name="top" /> Batalha de piões
                   </button>
                   <button className="secondary" onClick={() => setBattling('events')}>
-                    ⚡ Piões com eventos
+                    <Icon name="bolt" /> Piões com eventos
                   </button>
                 </div>
               )
@@ -170,7 +171,7 @@ export function GameSetupScreen({ match, dispatch }: { match: MatchState; dispat
             dispatch({ type: 'match', action: { type: 'timeUp' } })
           }
         >
-          ⏱ Tempo esgotado: encerrar a partida
+          <Icon name="clock" /> Tempo esgotado: encerrar a partida
         </button>
       )}
       <button className="link" onClick={() => confirm('Abandonar esta partida?') && dispatch({ type: 'quit' })}>

@@ -6,6 +6,7 @@ import { gameWins, type MatchState } from '../engine/match'
 import { computeStats, matchOutcome, type MatchRecord } from '../engine/stats'
 import { newId, type AppAction } from '../store'
 import { Brand } from './common'
+import { Icon } from './icons'
 
 const OUTCOME = { win: 'V', loss: 'D', draw: 'E' } as const
 
@@ -135,7 +136,7 @@ function EventCard(props: {
       {props.active ? (
         <>
           <button className="primary" onClick={props.onPlay}>
-            ⚔ Jogar rodada {round}
+            <Icon name="swords" /> Jogar rodada {round}
           </button>
           <button className="secondary" onClick={() => confirm(`Encerrar "${event.name}"? As próximas partidas não entram mais nele.`) && dispatch({ type: 'closeEvent', id: event.id })}>
             Encerrar evento

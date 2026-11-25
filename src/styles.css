@@ -1156,10 +1156,14 @@ h3 {
   vertical-align: middle;
 }
 
-.domains .dot {
-  width: 9px;
-  height: 9px;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+.domains {
+  gap: 3px;
+}
+
+.domains img {
+  width: 1.15em;
+  height: 1.15em;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.6));
 }
 
 /* Arte da lenda: retrato, com foco no rosto do campeão. */
@@ -2443,12 +2447,11 @@ h3 {
   place-items: center;
 }
 
-.domain-toggle i {
-  width: 13px;
-  height: 13px;
-  transform: rotate(45deg);
-  background: var(--dc);
+.domain-toggle img {
+  width: 20px;
+  height: 20px;
   opacity: 0.45;
+  filter: grayscale(0.6);
 }
 
 .domain-toggle.on {
@@ -2456,8 +2459,9 @@ h3 {
   box-shadow: 0 0 10px -2px var(--dc);
 }
 
-.domain-toggle.on i {
+.domain-toggle.on img {
   opacity: 1;
+  filter: none;
 }
 
 .set-select {
@@ -3863,15 +3867,19 @@ h3 {
   font-size: 1.1rem;
 }
 
+/* Seis colunas iguais: em celulares estreitos os botões encolhem junto com o desenho, sempre centralizado. */
 .tops-swatches {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.35rem;
 }
 
 .tops-swatch {
-  width: 50px;
-  height: 50px;
+  width: 100%;
+  max-width: 54px;
+  aspect-ratio: 1;
+  justify-self: center;
+  padding: 0;
   display: grid;
   place-items: center;
   border-radius: 50%;
@@ -4052,4 +4060,24 @@ h3 {
   50% {
     opacity: 0.35;
   }
+}
+
+/* Ícones em SVG (src/ui/icons.tsx): acompanham o tamanho e a cor do texto. */
+.icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: -0.2em;
+}
+
+.tile-icon.icon {
+  width: 28px;
+  height: 28px;
+  color: var(--gold);
+}
+
+.tops-swatch canvas {
+  display: block;
+  width: 86%;
+  height: 86%;
 }

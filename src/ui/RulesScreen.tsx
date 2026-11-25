@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { KEYWORDS } from '../data/keywords'
 import { searchRules } from '../data/rules'
 import { Brand } from './common'
+import { Icon } from './icons'
 import { CardText } from './LibraryScreen'
 
 const normalize = (s: string) =>
@@ -35,7 +36,9 @@ export function RulesScreen(props: { onClose: () => void; overlay?: boolean }) {
             return (
               <section key={t.id} className={`rule-topic ${expanded ? 'open' : ''}`}>
                 <button className="rule-head" onClick={() => setOpen(open === t.id ? null : t.id)} aria-expanded={expanded}>
-                  <span className="rule-icon">{t.icon}</span>
+                  <span className="rule-icon">
+                    <Icon name={t.icon} />
+                  </span>
                   <span className="rule-titles">
                     <b>{t.title}</b>
                     <small>

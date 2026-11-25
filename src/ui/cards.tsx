@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { cardImage, findBattlefield, findLegend, imageUrl, legendImage, searchBattlefields, searchLegends, type LegendCard } from '../data/cards'
 import type { Domain } from '../engine/types'
 import { autoFocusSearch, Sheet } from './common'
-import { DOMAIN_COLORS, POWER_LABELS } from './text'
+import { POWER_LABELS } from './text'
 
 /** Fundo com a arte de uma carta do banco de dados, se houver. */
 const art = (image: string | undefined) => (image ? { backgroundImage: `url("${image}")` } : undefined)
@@ -34,11 +34,14 @@ export function ArtPicker(props: { legend: LegendCard; current?: string; onPick:
   )
 }
 
+/** Símbolo oficial do domínio (cópia local em public/art/domains, baixada pelo sync-cards). */
+export const domainIconUrl = (d: Domain): string => `${import.meta.env.BASE_URL}art/domains/${d}.png`
+
 export function DomainIcons({ domains }: { domains: Domain[] }) {
   return (
     <span className="domains">
       {domains.map((d) => (
-        <i key={d} className="dot" style={{ background: DOMAIN_COLORS[d] }} title={POWER_LABELS[d]} />
+        <img key={d} src={domainIconUrl(d)} alt={POWER_LABELS[d]} title={POWER_LABELS[d]} />
       ))}
     </span>
   )

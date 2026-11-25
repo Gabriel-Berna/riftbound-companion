@@ -6,6 +6,7 @@ import type { AppAction } from '../store'
 import { findLegend } from '../data/cards'
 import { Brand } from './common'
 import { shareResult } from './share'
+import { Icon } from './icons'
 
 export function MatchOverScreen(props: {
   match: MatchState
@@ -55,7 +56,7 @@ export function MatchOverScreen(props: {
 
       {event && (
         <section className="event-banner">
-          <span aria-hidden="true">🏆</span>
+          <Icon name="trophy" />
           <span>
             <b>
               {event.name} · Rodada {match.round}
@@ -100,14 +101,20 @@ export function MatchOverScreen(props: {
       </section>
 
       <button className="secondary share-btn" onClick={share} disabled={sharing}>
-        {sharing ? 'Gerando imagem…' : '📤 Compartilhar resultado'}
+        {sharing ? (
+          'Gerando imagem…'
+        ) : (
+          <>
+            <Icon name="share" /> Compartilhar resultado
+          </>
+        )}
       </button>
       {event ? (
         <>
           {/* No evento, o próximo passo é a próxima rodada (outro oponente), não uma revanche fora do evento. */}
           {!event.closed && (
             <button className="primary big" onClick={props.onNextRound}>
-              ⚔ Próxima rodada
+              <Icon name="swords" /> Próxima rodada
             </button>
           )}
           <button className="secondary" onClick={props.onEvent}>

@@ -15,6 +15,8 @@ import {
   type BattleEnd,
 } from '../engine/tops'
 import { DOMAINS, type Domain, type PlayerIndex } from '../engine/types'
+import { domainIconUrl } from './cards'
+import { Icon, type IconName } from './icons'
 import { DOMAIN_COLORS, POWER_LABELS } from './text'
 
 type Phase = 'pick' | 'countdown' | 'battle' | 'replay' | 'done'
@@ -32,11 +34,11 @@ const END_TEXT: Record<BattleEnd, (loser: string) => string> = {
   time: () => 'O pião vencedor girou por mais tempo',
 }
 
-const EVENT_TEXT: Record<ArenaEventKind, string> = {
-  quake: '⚡ O estádio está tremendo!',
-  'wide-pocket': '⚠ Uma abertura se alargou!',
-  baron: '👁 O Barão apareceu no centro!',
-  surge: '✨ Onda de energia: giro renovado!',
+const EVENT_TEXT: Record<ArenaEventKind, { icon: IconName; text: string }> = {
+  quake: { icon: 'quake', text: 'O estádio está tremendo!' },
+  'wide-pocket': { icon: 'gap', text: 'Uma abertura se alargou!' },
+  baron: { icon: 'eye', text: 'O Barão apareceu no centro!' },
+  surge: { icon: 'sparkle', text: 'Onda de energia: giro renovado!' },
 }
 
 interface Spark {
@@ -66,13 +68,39 @@ interface Frame {
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
 /** Número de lâminas de cada formato: define o período do borrão de movimento. */
-const BLADES: Record<Domain, number> = { fury: 3, calm: 4, mind: 3, body: 6, chaos: 5, order: 4 }
+const BLADES: Record<Domain, number> = { fury: 3, calm: 3, mind: 3, body: 4, chaos: 4, order: 3 }
+
+/** Símbolos oficiais dos domínios, carregados uma vez; a face do pião aparece assim que a imagem chega. */
+const symbols = new Map<Domain, HTMLImageElement>()
+function domainSymbol(d: Domain, onLoad?: () => void): HTMLImageElement {
+  let img = symbols.get(d)
+  if (!img) {
+    img = new Image()
+    img.src = domainIconUrl(d)
+    symbols.set(d, img)
+  }
+  if (onLoad && !img.complete) img.addEventListener('load', onLoad, { once: true })
+  return img
+}
+
+/** Face do pião: disco escuro com o símbolo oficial do domínio. */
+function drawFace(ctx: CanvasRenderingContext2D, r: number, domain: Domain, color: string) {
+  ctx.fillStyle = '#0b1a20'
+  ctx.beginPath()
+  ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.strokeStyle = color
+  ctx.lineWidth = Math.max(1.5, r * 0.08)
+  ctx.stroke()
+  const img = domainSymbol(domain)
+  if (img.complete && img.naturalWidth) ctx.drawImage(img, -r * 0.38, -r * 0.38, r * 0.76, r * 0.76)
+}
 
 const polar = (r: number, a: number): [number, number] => [Math.cos(a) * r, Math.sin(a) * r]
 
 /**
- * Formato do pião por domínio: Fury com lâminas pontudas, Calm com pétalas, Mind com luas crescentes,
- * Body como uma engrenagem pesada, Chaos com lâminas irregulares e Order como uma estrela simétrica.
+ * Formato do pião por domínio, inspirado no símbolo oficial de cada um: Fury com ganchos (o tríscele),
+ * Calm com folhas, Mind com luas crescentes, Body com chevrons, Chaos com braços em espiral e Order com asas.
  * `outline` desenha o contorno claro (só quando as lâminas estão nítidas).
  */
 function drawBlades(ctx: CanvasRenderingContext2D, r: number, domain: Domain, color: string, outline: boolean) {
@@ -93,10 +121,12 @@ function drawBlades(ctx: CanvasRenderingContext2D, r: number, domain: Domain, co
         ctx.closePath()
         break
       case 'calm': {
-        // pétalas arredondadas
-        const [px, py] = polar(r * 0.62, a)
-        ctx.moveTo(px + Math.cos(a) * r * 0.45, py + Math.sin(a) * r * 0.45)
-        ctx.ellipse(px, py, r * 0.45, r * 0.27, a, 0, Math.PI * 2)
+        // folhas em gota, com a ponta para fora
+        ctx.moveTo(...polar(r * 1.12, a))
+        ctx.quadraticCurveTo(...polar(r * 0.75, a + 0.75), ...polar(r * 0.38, a + 0.45))
+        ctx.quadraticCurveTo(...polar(r * 0.3, a), ...polar(r * 0.38, a - 0.45))
+        ctx.quadraticCurveTo(...polar(r * 0.75, a - 0.75), ...polar(r * 1.12, a))
+        ctx.closePath()
         break
       }
       case 'mind': // luas crescentes
@@ -105,34 +135,28 @@ function drawBlades(ctx: CanvasRenderingContext2D, r: number, domain: Domain, co
         ctx.quadraticCurveTo(...polar(r * 0.6, a + 1.2), ...polar(r * 0.45, a))
         ctx.closePath()
         break
-      case 'body': {
-        // engrenagem: dentes largos e baixos
-        const half = step / 4
-        ctx.moveTo(...polar(r * 0.78, a - half * 2))
-        ctx.lineTo(...polar(r * 0.78, a - half))
-        ctx.lineTo(...polar(r * 1.05, a - half * 0.8))
-        ctx.lineTo(...polar(r * 1.05, a + half * 0.8))
-        ctx.lineTo(...polar(r * 0.78, a + half))
-        ctx.lineTo(...polar(r * 0.78, a + half * 2))
-        ctx.lineTo(...polar(r * 0.4, a + half * 2))
-        ctx.lineTo(...polar(r * 0.4, a - half * 2))
+      case 'body': // chevrons apontando para fora, como os do símbolo
+        ctx.moveTo(...polar(r * 1.12, a))
+        ctx.lineTo(...polar(r * 0.72, a - 0.62))
+        ctx.lineTo(...polar(r * 0.55, a - 0.5))
+        ctx.lineTo(...polar(r * 0.84, a))
+        ctx.lineTo(...polar(r * 0.55, a + 0.5))
+        ctx.lineTo(...polar(r * 0.72, a + 0.62))
         ctx.closePath()
         break
-      }
-      case 'chaos': {
-        // lâminas tortas, cada uma de um tamanho
-        const len = [1.18, 0.82, 1.05, 0.7, 0.95][k]
-        ctx.moveTo(...polar(r * 0.35, a - 0.2))
-        ctx.lineTo(...polar(r * len, a + 0.1 + (k % 2) * 0.25))
-        ctx.lineTo(...polar(r * len * 0.6, a + 0.45))
-        ctx.lineTo(...polar(r * 0.4, a + 0.6))
+      case 'chaos': // braços em espiral, como o redemoinho do símbolo
+        ctx.moveTo(...polar(r * 0.32, a))
+        ctx.quadraticCurveTo(...polar(r * 0.95, a + 0.15), ...polar(r * 1.15, a + 0.95))
+        ctx.quadraticCurveTo(...polar(r * 0.72, a + 0.62), ...polar(r * 0.4, a + 0.75))
         ctx.closePath()
         break
-      }
-      case 'order': // estrela de quatro pontas, simétrica
-        ctx.moveTo(...polar(r * 0.42, a - step / 2))
-        ctx.lineTo(...polar(r * 1.15, a))
-        ctx.lineTo(...polar(r * 0.42, a + step / 2))
+      case 'order': // asas abertas, com penas
+        ctx.moveTo(...polar(r * 0.4, a - 0.45))
+        ctx.lineTo(...polar(r * 1.15, a - 0.2))
+        ctx.lineTo(...polar(r * 0.95, a))
+        ctx.lineTo(...polar(r * 1.1, a + 0.15))
+        ctx.lineTo(...polar(r * 0.88, a + 0.32))
+        ctx.lineTo(...polar(r * 0.4, a + 0.45))
         ctx.closePath()
         break
     }
@@ -287,19 +311,15 @@ function draw(ctx: CanvasRenderingContext2D, size: number, frame: Frame, domains
         ctx.stroke()
       }
     }
-    ctx.beginPath()
-    ctx.arc(0, 0, r * 0.5, 0, Math.PI * 2)
-    ctx.strokeStyle = colors[i]
-    ctx.lineWidth = 3
-    ctx.stroke()
-    ctx.fillStyle = '#f9eddc'
-    ctx.beginPath()
-    ctx.arc(0, 0, r * 0.3, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.fillStyle = colors[i]
-    ctx.beginPath()
-    ctx.arc(r * 0.12, 0, r * 0.1, 0, Math.PI * 2)
-    ctx.fill()
+    // A face gira junto: com borrão no lançamento, nítida quando o pião perde força.
+    const faces = Math.min(4, copies)
+    for (let c = 0; c < faces; c++) {
+      ctx.save()
+      ctx.rotate((-sweep * c) / faces)
+      ctx.globalAlpha = baseAlpha * (c === 0 ? 1 : 0.35)
+      drawFace(ctx, r, domains[i], colors[i])
+      ctx.restore()
+    }
     ctx.restore()
   })
 
@@ -324,19 +344,23 @@ function TopPreview({ domain }: { domain: Domain }) {
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const dpr = window.devicePixelRatio || 1
-    el.width = 44 * dpr
-    el.height = 44 * dpr
-    const ctx = el.getContext('2d')!
-    ctx.scale(dpr, dpr)
-    ctx.translate(22, 22)
-    drawBlades(ctx, 17, domain, DOMAIN_COLORS[domain], true)
-    ctx.fillStyle = '#f9eddc'
-    ctx.beginPath()
-    ctx.arc(0, 0, 5, 0, Math.PI * 2)
-    ctx.fill()
+    const paint = () => {
+      // Desenha no tamanho em que o botão está na tela (ele encolhe em celulares estreitos).
+      const css = el.getBoundingClientRect().width || 44
+      const dpr = window.devicePixelRatio || 1
+      el.width = Math.round(css * dpr)
+      el.height = Math.round(css * dpr)
+      const ctx = el.getContext('2d')!
+      ctx.scale(dpr, dpr)
+      ctx.translate(css / 2, css / 2)
+      const r = css * 0.4
+      drawBlades(ctx, r, domain, DOMAIN_COLORS[domain], true)
+      drawFace(ctx, r, domain, DOMAIN_COLORS[domain])
+    }
+    paint()
+    domainSymbol(domain, paint)
   }, [domain])
-  return <canvas ref={ref} style={{ width: 44, height: 44 }} aria-hidden="true" />
+  return <canvas ref={ref} aria-hidden="true" />
 }
 
 /**
@@ -537,7 +561,7 @@ export function TopsBattle(props: {
             </div>
           ))}
           <button className="primary big" onClick={() => setPhase('countdown')}>
-            🌀 Lançar!
+            <Icon name="top" /> Lançar!
           </button>
           <button className="link" onClick={props.onCancel}>
             Voltar
@@ -565,7 +589,7 @@ export function TopsBattle(props: {
             )}
             {phase === 'battle' && banner && (
               <span key={banner} className="tops-event" role="status">
-                {EVENT_TEXT[banner]}
+                <Icon name={EVENT_TEXT[banner].icon} /> {EVENT_TEXT[banner].text}
               </span>
             )}
             {phase === 'replay' && (
@@ -586,7 +610,7 @@ export function TopsBattle(props: {
               </button>
               {frames.current.length > 0 && (
                 <button className="link" onClick={() => setPhase('replay')}>
-                  🎬 Ver o replay de novo
+                  <Icon name="replay" /> Ver o replay de novo
                 </button>
               )}
             </div>

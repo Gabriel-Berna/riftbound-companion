@@ -13,6 +13,7 @@ import { SettingsToggles } from './SettingsScreen'
 import { accentColors, VersusIntro, VictoryScreen } from './spectacle'
 import { RoundClock } from './timer'
 import { describeLog } from './text'
+import { Icon } from './icons'
 
 type Panel =
   | { kind: 'final-point'; player: PlayerIndex }
@@ -166,10 +167,14 @@ function PlayerPanel(props: {
       </header>
       <div className="tap-zones">
         <button className="tap hold" onClick={() => props.onScore('hold')} aria-label={`Hold: +1 ponto para ${p.name}`}>
-          <span className="tap-label">⚑ Hold</span>
+          <span className="tap-label">
+            <Icon name="flag" /> Hold
+          </span>
         </button>
         <button className="tap conquer" onClick={() => props.onScore('conquer')} aria-label={`Conquer: +1 ponto para ${p.name}`}>
-          <span className="tap-label">⚔ Conquer</span>
+          <span className="tap-label">
+            <Icon name="swords" /> Conquer
+          </span>
         </button>
         <div className="panel-score" aria-live="polite">
           <div className="score">
@@ -182,7 +187,7 @@ function PlayerPanel(props: {
         </div>
         {flash && (
           <span key={game.log.length} className={`tap-flash ${flash}`} aria-hidden="true">
-            +1 {flash === 'hold' ? '⚑' : '⚔'}
+            +1 <Icon name={flash === 'hold' ? 'flag' : 'swords'} />
           </span>
         )}
       </div>
@@ -208,13 +213,13 @@ function CenterBar(props: {
     <section className="center-bar">
       <div className="cb-row">
         <button className="tool" onClick={props.onUndo} disabled={!props.canUndo} aria-label="Desfazer">
-          ↶
+          <Icon name="undo" />
         </button>
         <div className="cb-mid">
           {match.timer && !game.timeUp ? <RoundClock match={match} /> : <span className="cb-target">Vence com {game.victoryScore}</span>}
         </div>
         <button className="tool" onClick={props.onLibrary} aria-label="Cartas">
-          🃏
+          <Icon name="cards" />
         </button>
         <button className="tool" onClick={props.onMenu} aria-label="Menu">
           ⋯
@@ -232,7 +237,7 @@ function CenterBar(props: {
       {game.timeUp && (
         <div className="time-up">
           <span>
-            ⏱ <b>Tempo esgotado.</b> Terminem o turno e joguem mais {EXTRA_TURNS} turnos.
+            <Icon name="clock" /> <b>Tempo esgotado.</b> Terminem o turno e joguem mais {EXTRA_TURNS} turnos.
           </span>
           <button className="secondary" onClick={props.onEndByTime}>
             Fim dos turnos extras
@@ -374,10 +379,14 @@ function MenuSheet(props: {
     <Sheet title="Menu" onClose={props.onClose}>
       <div className="actions two">
         <button className="action" onClick={props.onLog}>
-          <b>📜 Histórico</b>
+          <b>
+            <Icon name="log" /> Histórico
+          </b>
         </button>
         <button className="action" onClick={props.onRules}>
-          <b>📖 Regras</b>
+          <b>
+            <Icon name="book" /> Regras
+          </b>
         </button>
       </div>
       <h3>Preferências</h3>
@@ -391,7 +400,9 @@ function MenuSheet(props: {
               props.dispatch({ type: 'match', action: { type: props.match.timer?.pausedAt != null ? 'resumeTimer' : 'pauseTimer', now: Date.now() } }),
             )}
           >
-            <b>{props.match.timer.pausedAt != null ? '▶ Retomar timer' : '⏸ Pausar timer'}</b>
+            <b>
+              <Icon name={props.match.timer.pausedAt != null ? 'play' : 'pause'} /> {props.match.timer.pausedAt != null ? 'Retomar timer' : 'Pausar timer'}
+            </b>
             <small>Em torneios o relógio não para; use em partidas casuais.</small>
           </button>
         )}
@@ -408,7 +419,9 @@ function MenuSheet(props: {
                 props.dispatch({ type: 'match', action: { type: 'timeUp' } }),
             )}
           >
-            <b>⏱ O tempo da rodada acabou</b>
+            <b>
+              <Icon name="clock" /> O tempo da rodada acabou
+            </b>
             <small>Para o relógio do torneio. O app avisa dos 3 turnos extras e encerra a partida depois deles.</small>
           </button>
         )}

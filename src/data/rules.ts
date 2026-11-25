@@ -2,9 +2,11 @@
  * Regras rápidas em português, para consulta na mesa.
  * Resumo do Core Rules (CR) e do Tournament Rules (TR) de 09/10/2026 — ver docs/regras-riftbound.md.
  */
+import type { IconName } from '../ui/icons'
+
 export interface RuleTopic {
   id: string
-  icon: string
+  icon: IconName
   title: string
   summary: string
   points: string[]
@@ -14,7 +16,7 @@ export interface RuleTopic {
 export const RULE_TOPICS: RuleTopic[] = [
   {
     id: 'vitoria',
-    icon: '🏆',
+    icon: 'trophy',
     title: 'Como vencer',
     summary: 'Ter 8 pontos ou mais e mais pontos que todos os oponentes.',
     points: [
@@ -28,7 +30,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'pontuacao',
-    icon: '⚑',
+    icon: 'flag',
     title: 'Hold e Conquer',
     summary: 'Pontos vêm de segurar e de conquistar battlefields — cada um, no máximo uma vez por turno.',
     points: [
@@ -41,7 +43,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'ponto-final',
-    icon: '🎯',
+    icon: 'target',
     title: 'Regra do Ponto Final',
     summary: 'A 1 ponto da vitória, conquistar só dá o ponto se você pontuou todos os battlefields no turno.',
     points: [
@@ -54,7 +56,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'turno',
-    icon: '⟳',
+    icon: 'rematch',
     title: 'Estrutura do turno',
     summary: 'Awaken → Beginning (Hold) → Channel → Draw → Main → Ending.',
     points: [
@@ -69,7 +71,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'setup',
-    icon: '🎴',
+    icon: 'cards',
     title: 'Preparação e mulligan',
     summary: 'Compre 4, troque até 2. Quem joga em segundo canaliza 1 runa extra no primeiro turno.',
     points: [
@@ -82,7 +84,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'recursos',
-    icon: '◆',
+    icon: 'rune',
     title: 'Runas, Energy, Power e XP',
     summary: 'Exaurir uma runa dá Energy; reciclar dá Power do domínio dela.',
     points: [
@@ -95,7 +97,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'movimento',
-    icon: '➜',
+    icon: 'move',
     title: 'Movimento e controle',
     summary: 'Mover custa exaurir a unidade; quem fica sozinho num battlefield controla ele.',
     points: [
@@ -109,7 +111,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'showdown',
-    icon: '⚡',
+    icon: 'bolt',
     title: 'Showdown',
     summary: 'Janela em que os jogadores alternam jogando Action e Reaction.',
     points: [
@@ -122,7 +124,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'combate',
-    icon: '⚔',
+    icon: 'swords',
     title: 'Combate e dano',
     summary: 'Some o Might de cada lado; o atacante distribui o dano primeiro.',
     points: [
@@ -136,7 +138,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'burn-out',
-    icon: '🔥',
+    icon: 'flame',
     title: 'Burn Out',
     summary: 'Precisou comprar com o deck vazio? Recicle o descarte e o oponente ganha 1 ponto.',
     points: [
@@ -148,7 +150,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'hidden',
-    icon: '🂠',
+    icon: 'hidden',
     title: 'Hidden',
     summary: 'Esconda por [A] num battlefield seu; no turno seguinte, jogue como Reaction de graça.',
     points: [
@@ -161,7 +163,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'deck',
-    icon: '🃏',
+    icon: 'library',
     title: 'Construção de deck',
     summary: 'Lenda, 40 cartas, 12 runas e 3 battlefields.',
     points: [
@@ -174,7 +176,7 @@ export const RULE_TOPICS: RuleTopic[] = [
   },
   {
     id: 'partida',
-    icon: '⏱',
+    icon: 'clock',
     title: 'Melhor de 3 e tempo',
     summary: 'Quem perdeu escolhe se começa; tempo esgotado = 3 turnos extras.',
     points: [

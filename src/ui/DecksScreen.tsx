@@ -6,6 +6,7 @@ import { newId, type AppAction } from '../store'
 import { ArtPicker, BattlefieldPicker, BattlefieldTile, DomainIcons, LegendPicker, LegendTile } from './cards'
 import { autoFocusSearch, Brand, Sheet } from './common'
 import { CardText } from './LibraryScreen'
+import { Icon } from './icons'
 
 const GROUPS: [string, (c: LibraryCard | undefined) => boolean][] = [
   ['Campeões', (c) => c?.type === 'unit' && c.super === 'champion'],
@@ -230,7 +231,7 @@ export function DeckEditor(props: { deck: Deck; saved: boolean; startWithPaste?:
             <LegendTile legend={legend} art={deck.legendArt} onClick={() => setSheet('legend')} />
             {legend.arts.length > 1 && (
               <button className="art-btn" onClick={() => setSheet('art')}>
-                🎨 Arte · {legend.arts.length}
+                <Icon name="art" /> Arte · {legend.arts.length}
               </button>
             )}
           </>

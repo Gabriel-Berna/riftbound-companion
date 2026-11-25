@@ -8,6 +8,7 @@ import { battlefieldArt, DomainIcons } from './cards'
 import { MatchupHeatmap, PointsSplitBars, TurnOrderBars, WinRateChart } from './charts'
 import { Brand } from './common'
 import { shareResult } from './share'
+import { Icon } from './icons'
 
 const percent = (t: Tally) => {
   const rate = winRate(t)
@@ -299,7 +300,7 @@ export function StatsScreen(props: { records: MatchRecord[]; events: TcgEvent[];
                       vs {r.players[1].name}
                       <span className="spacer" />
                       <button className="icon-btn small" aria-label="Compartilhar resultado" onClick={() => void shareResult(r).catch(() => alert('Não foi possível gerar a imagem.'))}>
-                        📤
+                        <Icon name="share" />
                       </button>
                       <button
                         className="icon-btn small"

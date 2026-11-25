@@ -165,6 +165,18 @@ for (const url of legends.flatMap((l) => l.arts)) {
 }
 console.log(`${downloaded} artes de lenda baixadas para public/art/legends/`)
 
+// Símbolos oficiais dos domínios (64×64 na galeria, baixados em 128), usados no lugar de bolinhas de cor e nos piões.
+const DOMAIN_DIR = new URL('../public/art/domains/', import.meta.url)
+await mkdir(DOMAIN_DIR, { recursive: true })
+const domainIcons = new Map()
+for (const c of cards) for (const d of c.domain?.values ?? []) if (d.icon?.url && d.id !== 'colorless') domainIcons.set(d.id, d.icon.url.split('?')[0])
+for (const [id, url] of domainIcons) {
+  const res = await fetch(`${url}?w=128&fm=png`)
+  if (!res.ok) throw new Error(`Falha ao baixar o símbolo de ${id}: ${res.status}`)
+  await writeFile(new URL(`${id}.png`, DOMAIN_DIR), Buffer.from(await res.arrayBuffer()))
+}
+console.log(`${domainIcons.size} símbolos de domínio salvos em public/art/domains/`)
+
 /**
  * Junta as artes promocionais do Riftcodex às cartas da galeria, pelo nome.
  * Muitas promos ainda apontam para a arte normal: só entram imagens que a carta não tem.

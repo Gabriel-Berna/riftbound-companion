@@ -4,6 +4,7 @@ import type { MatchPlayer } from '../engine/match'
 import type { AppAction, AppState, Settings } from '../store'
 import { ArtPicker, LegendPicker, LegendTile } from './cards'
 import { Brand } from './common'
+import { Icon } from './icons'
 
 const SETTING_LABELS: [keyof Settings, string, string][] = [
   ['sound', 'Sons', 'Ao pontuar (Hold e Conquer soam diferente) e ao vencer.'],
@@ -62,7 +63,7 @@ export function SettingsScreen(props: {
               <LegendTile legend={legend} art={profile.legendArt} onClick={() => setPickingLegend(true)} />
               {legend.arts.length > 1 && (
                 <button className="secondary" onClick={() => setPickingArt(true)}>
-                  🎨 Escolher arte ({legend.arts.length} disponíveis)
+                  <Icon name="art" /> Escolher arte ({legend.arts.length} disponíveis)
                 </button>
               )}
             </>

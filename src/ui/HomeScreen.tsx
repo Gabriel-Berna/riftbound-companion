@@ -4,6 +4,7 @@ import { gameWins, type MatchPlayer, type MatchState } from '../engine/match'
 import { campaign, eventSummary, nextRound, type TcgEvent } from '../engine/events'
 import { computeStats, matchOutcome, winRate, type MatchRecord } from '../engine/stats'
 import { DomainIcons } from './cards'
+import { Icon } from './icons'
 
 const OUTCOME = { win: 'V', loss: 'D', draw: 'E' } as const
 
@@ -75,12 +76,12 @@ export function HomeScreen(props: {
       </section>
 
       <button className="primary big new-match" onClick={props.onNewMatch}>
-        {event ? `⚔ Rodada ${nextRound(event, records)}` : '⚔ Nova partida'}
+        <Icon name="swords" /> {event ? `Rodada ${nextRound(event, records)}` : 'Nova partida'}
       </button>
 
       {event && eventRecord && (
         <button className="event-banner" onClick={props.onEvents}>
-          <span aria-hidden="true">🏆</span>
+          <Icon name="trophy" />
           <span>
             <b>{event.name}</b>
             <small>
@@ -95,38 +96,38 @@ export function HomeScreen(props: {
         {/* No evento, a próxima partida é a próxima rodada: a revanche ficaria fora dele. */}
         {props.onRematch && last && !event && (
           <button className="tile rematch" onClick={props.onRematch}>
-            <span className="tile-icon">↻</span>
+            <Icon name="rematch" className="tile-icon" />
             <b>Revanche</b>
             <small>vs {last.players[1].name}</small>
           </button>
         )}
         <button className="tile" onClick={props.onStats}>
-          <span className="tile-icon">📊</span>
+          <Icon name="chart" className="tile-icon" />
           <b>Estatísticas</b>
           <small>{records.length ? `${records.length} partida${records.length > 1 ? 's' : ''}` : 'Nenhuma partida ainda'}</small>
         </button>
         <button className="tile" onClick={props.onDecks}>
-          <span className="tile-icon">🃏</span>
+          <Icon name="cards" className="tile-icon" />
           <b>Decks</b>
           <small>{props.deckCount ? `${props.deckCount} salvo${props.deckCount > 1 ? 's' : ''}` : 'Salve seus decks'}</small>
         </button>
         <button className="tile" onClick={props.onLibrary}>
-          <span className="tile-icon">📚</span>
+          <Icon name="library" className="tile-icon" />
           <b>Cartas</b>
           <small>Biblioteca completa</small>
         </button>
         <button className="tile" onClick={props.onEvents}>
-          <span className="tile-icon">🏆</span>
+          <Icon name="trophy" className="tile-icon" />
           <b>Eventos</b>
           <small>{event ? 'Evento em andamento' : 'Nexus Night e torneios'}</small>
         </button>
         <button className="tile" onClick={props.onRules}>
-          <span className="tile-icon">📖</span>
+          <Icon name="book" className="tile-icon" />
           <b>Regras</b>
           <small>Consulta rápida</small>
         </button>
         <button className="tile" onClick={props.onSettings}>
-          <span className="tile-icon">⚙</span>
+          <Icon name="gear" className="tile-icon" />
           <b>Ajustes</b>
           <small>Perfil e preferências</small>
         </button>
